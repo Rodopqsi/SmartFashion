@@ -1,0 +1,12 @@
+django==5.0.7
+djangorestframework==3.15.2
+PyMySQL==1.1.1
+django-cors-headers==4.4.0
+djangorestframework-simplejwt==5.3.1
+google-auth==2.34.0
+google-auth-oauthlib==1.2.1
+python-dotenv==1.0.1
+
+# Nota: mysqlclient se omite para evitar compilar en Windows sin Build Tools.
+# Si instalas Microsoft C++ Build Tools y MySQL/MariaDB dev libs, puedes añadir:
+# mysqlclient==2.2.4
