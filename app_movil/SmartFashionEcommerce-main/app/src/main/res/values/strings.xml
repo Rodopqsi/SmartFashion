@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">SmartFashionEcommerce</string>
+
+    <!-- Catálogo -->
+    <string name="catalog_mejores_prendas">¡Las mejores prendas!</string>
+
+    <!-- Google Sign-In Client ID -->
+    <string name="default_web_client_id">453125572731-ku60usi69c00n5vdl4umbm222v0nl8ui.apps.googleusercontent.com</string>
+</resources>

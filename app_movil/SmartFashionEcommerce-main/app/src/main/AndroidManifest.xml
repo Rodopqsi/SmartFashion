@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <application
+        android:allowBackup="true"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.SmartFashionEcommerce"
+        tools:targetApi="31">
+
+        <!-- 🟢 Pantalla Principal (Inicio de la App) -->
+        <activity
+            android:name=".PantallaPrincipalActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 🔑 Login -->
+        <activity
+            android:name=".DarkLoginActivity"
+            android:exported="true" />
+
+        <!-- 👤 Registro de usuario -->
+        <activity
+            android:name=".RegisterActivity"
+            android:exported="true" />
+
+        <!-- 🏠 Pantalla principal tras login -->
+        <activity
+            android:name=".home.HomeActivity"
+            android:exported="true"
+            android:theme="@style/Theme.SmartFashionEcommerce" />
+
+        <!-- 🔑 Recuperar contraseña -->
+        <activity
+            android:name=".RecoverPasswordActivity"
+            android:exported="true" />
+
+        <!-- 📧 Email enviado -->
+        <activity
+            android:name=".EmailSentActivity"
+            android:exported="true" />
+
+        <!-- 🛍️ Catálogo -->
+        <activity
+            android:name=".catalog.CatalogActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Catalog" />
+
+        <!-- 🔍 Detalle de producto -->
+        <activity
+            android:name=".detalles.ProductDetailActivity"
+            android:exported="true"
+            android:theme="@style/Theme.SmartFashionEcommerce" />
+
+        <!-- 👤 Mi perfil -->
+        <activity
+            android:name=".miperfil.MiPerfilActivity"
+            android:exported="true"
+            android:theme="@style/Theme.SmartFashionEcommerce" />
+
+        <!-- 📦 Direcciones -->
+        <activity
+            android:name=".miperfil.DireccionesEnvioActivity"
+            android:exported="true"
+            android:theme="@style/Theme.SmartFashionEcommerce" />
+
+        <!-- ❤️ Favoritos -->
+        <activity
+            android:name=".home.FavActivity"
+            android:exported="true"
+            android:theme="@style/Theme.SmartFashionEcommerce" />
+
+        <!-- 🛒 Carrito -->
+        <activity
+            android:name=".carrito.Carrito"
+            android:exported="true"
+            android:theme="@style/Theme.SmartFashionEcommerce" />
+
+        <!-- 💳 Finalizar compra -->
+        <activity
+            android:name=".carrito.FinalizarCompra"
+            android:exported="true"
+            android:theme="@style/Theme.SmartFashionEcommerce" />
+
+
+        <!-- ✅ App Links para Firebase Auth -->
+        <activity
+            android:name=".LinkHandlerActivity"
+            android:exported="true">
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="smartfashionecommerce.firebaseapp.com"
+                    android:pathPrefix="/__/auth/action" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>

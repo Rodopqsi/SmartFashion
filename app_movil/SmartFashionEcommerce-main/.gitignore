@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+*/build/
+
+# Local configuration (no debe subirse)
+local.properties
+
+# Google services (credenciales Firebase)
+app/google-services.json
+
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+
+# macOS
+.DS_Store
+
+# Capturas y compilaciones nativas
+/captures
+.externalNativeBuild
+.cxx
