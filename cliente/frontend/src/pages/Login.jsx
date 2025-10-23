@@ -19,6 +19,10 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
   const [verifyStep, setVerifyStep] = useState({ active:false, email:'', code:'' })
   const [googlePending, setGooglePending] = useState({ active:false, email:'', suggested:'', pending:'', username:'' })
 
+  // Estados para toggle de contraseñas
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+
   const validators = {
     name: v => isLogin ? null : (!v.trim() ? 'Nombre requerido' : (v.trim().length < 2 ? 'Mínimo 2 caracteres' : null)),
     email: v => !v ? 'Email requerido' : (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? null : 'Email inválido'),
@@ -27,13 +31,13 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
     confirm: (v, p) => isLogin ? null : (!v ? 'Confirmación requerida' : (v !== p ? 'Las contraseñas no coinciden' : null)),
   }
 
-  const errors = useMemo(()=>({
+  const errors = useMemo(()=>(({
     name: validators.name(form.name),
     email: validators.email(form.email),
     phone: validators.phone(form.phone),
     password: validators.password(form.password),
     confirm: validators.confirm(form.confirm, form.password),
-  }), [form, mode])
+  })), [form, mode])
 
   const isValid = isLogin
     ? !errors.email && !errors.password
@@ -69,8 +73,7 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
     }
   }
 
-  // Eliminado botón fake: el flujo real usa Google Identity Services (GSI)
-
+  // Google login (sin cambios)
   useEffect(()=>{
     window.onGoogleCredential = async (resp) => {
       if (!resp?.credential) { push('Credencial Google vacía','error'); return }
@@ -87,7 +90,6 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
         push(e.message || 'Error Google','error')
       }
     }
-    // Inicializar y renderizar el botón GSI de forma explícita
     let attempts = 0
     const maxAttempts = 20
     const tryInit = () => {
@@ -119,9 +121,7 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
         <div className="brand-block">
           <h1 className="brand-title">SmartFashion</h1>
           <p className="brand-sub">{isLogin ? 'Inicia sesión con tu cuenta' : 'Crea tu cuenta'}</p>
-          {!isLogin && (
-            <p className="brand-desc">Obtén acceso a las marcas más grandes.<br/>Hazte miembro hoy.</p>
-          )}
+          {!isLogin && <p className="brand-desc">Obtén acceso a las marcas más grandes.<br/>Hazte miembro hoy.</p>}
         </div>
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {!isLogin && (
@@ -162,24 +162,65 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
               {touched.email && errors.email && <div className="error-msg">{errors.email}</div>}
             </div>
           )}
+
+          {/* Contraseña */}
           <div className={`form-field ${touched.password && errors.password ? 'has-error' : ''}`}>
             <label htmlFor="password">Contraseña <span className="req">*</span></label>
             <div className="input-wrapper icon-left">
               <span className="input-icon">🔒</span>
-              <input id="password" name="password" type="password" value={form.password} onChange={handleChange} onBlur={handleBlur} placeholder="••••••••" autoComplete={isLogin? 'current-password':'new-password'} aria-invalid={!!(touched.password && errors.password)} />
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="••••••••"
+                autoComplete={isLogin? 'current-password':'new-password'}
+                aria-invalid={!!(touched.password && errors.password)}
+              />
+              <button
+                type="button"
+                className="toggle-eye"
+                onClick={()=>setShowPassword(s => !s)}
+                style={{marginLeft:5, border:'none', background:'transparent', cursor:'pointer'}}
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
             </div>
             {touched.password && errors.password && <div className="error-msg">{errors.password}</div>}
           </div>
+
+          {/* Confirmar contraseña */}
           {!isLogin && (
             <div className={`form-field ${touched.confirm && errors.confirm ? 'has-error' : ''}`}>
               <label htmlFor="confirm">Confirmar contraseña <span className="req">*</span></label>
               <div className="input-wrapper icon-left">
                 <span className="input-icon">✔️</span>
-                <input id="confirm" name="confirm" type="password" value={form.confirm} onChange={handleChange} onBlur={handleBlur} placeholder="Confirmar contraseña" autoComplete="new-password" aria-invalid={!!(touched.confirm && errors.confirm)} />
+                <input
+                  id="confirm"
+                  name="confirm"
+                  type={showConfirm ? 'text' : 'password'}
+                  value={form.confirm}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Confirmar contraseña"
+                  autoComplete="new-password"
+                  aria-invalid={!!(touched.confirm && errors.confirm)}
+                />
+                <button
+                  type="button"
+                  className="toggle-eye"
+                  onClick={()=>setShowConfirm(s => !s)}
+                  style={{marginLeft:5, border:'none', background:'transparent', cursor:'pointer'}}
+                >
+                  {showConfirm ? '🙈' : '👁️'}
+                </button>
               </div>
               {touched.confirm && errors.confirm && <div className="error-msg">{errors.confirm}</div>}
             </div>
           )}
+
           <div className="form-row between small">
             <label className="checkbox-inline">
               <input type="checkbox" name="remember" checked={form.remember} onChange={handleChange} /> ¡Recordarme!
@@ -190,7 +231,6 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
             {submitting ? 'Procesando...' : (isLogin ? 'INICIAR SESIÓN' : 'CREAR CUENTA')}
           </button>
           <div className="divider"><span>{isLogin ? 'O inicia sesión con' : 'O regístrate con'}</span></div>
-          {/* Botón Google renderizado por GSI aquí */}
           <div id="googleSignInDiv" style={{ display:'flex', justifyContent:'center' }} />
           <p className="alt-link">
             {isLogin ? '¿Aún no tienes cuenta? ' : '¿Ya tienes cuenta? '}
@@ -203,14 +243,12 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
       </div>
       <div className="login-image-pane" aria-hidden="true">
         <div className="login-img" style={{ position:'relative', width:'100%', height:'100%' }}>
-          <img
-            src={isLogin ? loginImg : regImg}
-            alt="Auth side"
-            style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
-          />
+          <img src={isLogin ? loginImg : regImg} alt="Auth side" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
         </div>
       </div>
     </div>
+
+    {/* Modal verificación */}
     {verifyStep.active && (
       <div className="modal-backdrop" style={{position:'fixed', inset:0, background:'rgba(0,0,0,.4)'}}>
         <div className="modal" style={{background:'#fff', padding:'20px', borderRadius:10, maxWidth:420, margin:'10% auto'}}>
@@ -238,6 +276,7 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
       </div>
     )}
 
+    {/* Modal Google pending */}
     {googlePending.active && (
       <div className="modal-backdrop" style={{position:'fixed', inset:0, background:'rgba(0,0,0,.4)'}}>
         <div className="modal" style={{background:'#fff', padding:'20px', borderRadius:10, maxWidth:420, margin:'10% auto'}}>
@@ -248,7 +287,6 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
             value={googlePending.username}
             onChange={(e)=>{
               const val = e.target.value
-              // solo permitir letras, numeros, _ . - y limitar largo a 20
               const clean = val.replace(/[^a-zA-Z0-9_\.\-]/g, '').slice(0,20)
               setGooglePending(v=>({...v, username: clean}))
             }}
@@ -272,4 +310,3 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
     </>
   )
 }
-
