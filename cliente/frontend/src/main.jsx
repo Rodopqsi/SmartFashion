@@ -8,6 +8,10 @@ import Login from './pages/Login.jsx'
 import Profile from './pages/Profile.jsx'
 import Favorites from './pages/Favorites.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
+import ProductoDetalle from './pages/ProductoDetalle.jsx'
+import ColeccionesScreen from './pages/Colecciones.jsx';
+import ColeccionDetalle from './pages/ColeccionDetalle.jsx'; // 👈 Tu nuevo componente
+
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -21,6 +25,10 @@ createRoot(document.getElementById('root')).render(
             <Route path="/perfil" element={<Profile />} />
             <Route path="/favoritos" element={<Favorites />} />
             <Route path="/recuperar" element={<ForgotPassword />} />
+            <Route path="/detalle" element={<ProductoDetalle />} />
+            <Route path="/colecciones" element={<ColeccionesScreen />} />
+            <Route path="/colecciones/:collectionSlug" element={<ColeccionDetalle />}/>
+            
           </Routes>
         </BrowserRouter>
       </AuthProvider>

@@ -1,0 +1,192 @@
+.detalle-container {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  background-color: #fff;
+}
+
+.detalle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 10px;
+}
+
+.logo {
+  font-weight: bold;
+  color: #001f7a;
+}
+
+.header-icons {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.menu {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 5px;
+}
+
+.detalle-main {
+  display: flex;
+  gap: 40px;
+  margin-top: 30px;
+}
+
+.detalle-imagen {
+  flex: 1;
+}
+
+.imagen-principal {
+  width: 100%;
+  height: 450px;     /* ✅ define altura */
+  object-fit: cover; /* ✅ evita deformaciones */
+  border-radius: 10px;
+}
+
+
+.miniaturas {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.miniaturas img {
+  width: 90px;
+  height: 90px;      /* ✅ altura fija */
+  object-fit: cover; /* ✅ mantiene proporción */
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+
+.detalle-info {
+  flex: 1;
+}
+
+.estrellas {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 10px 0;
+}
+
+.descripcion {
+  color: #444;
+  margin-bottom: 20px;
+}
+
+.tallas button {
+  margin: 5px;
+  padding: 8px 12px;
+  border: 1px solid #aaa;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.color-circulos {
+  display: flex;
+  gap: 10px;
+}
+
+.color {
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+}
+
+.color.negro {
+  background-color: black;
+}
+
+.color.azul {
+  background-color: #1f3a93;
+}
+
+.color.lila {
+  background-color: #b99adb;
+}
+
+.cantidad .contador {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.contador button {
+  border: 1px solid #aaa;
+  background: #fff;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.stock {
+  display: inline-block;
+  background-color: #001f7a;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  margin-top: 15px;
+}
+
+.botones-carrito {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn-agregar {
+  flex: 1;
+  background-color: black;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-favorito {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  padding: 12px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.relacionados {
+  margin-top: 40px;
+}
+
+.grid-relacionados {
+  display: flex;
+  gap: 20px;
+  margin-top: 15px;
+}
+
+.card-rel {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  background: white;
+  width: 200px;
+}
+
+.card-rel img {
+  width: 100%;
+  height: 220px;     /* ✅ misma altura para todas */
+  object-fit: cover; /* ✅ evita que se deformen */
+  border-radius: 8px;
+}
+

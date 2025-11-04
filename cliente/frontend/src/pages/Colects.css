@@ -1,0 +1,184 @@
+/* Estilos Generales y Tipografía (Base) */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif; /* Puedes cambiar a 'Roboto' o 'Montserrat' si lo prefieres */
+    background-color: #f4f4f4;
+}
+
+/* ----------------------------------- */
+/* 1. Encabezado Principal (Barra Azul) */
+/* ----------------------------------- */
+
+.main-header {
+    background-color: #16245a; /* Azul oscuro corporativo */
+    color: white;
+    padding: 30px 50px;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between; 
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.main-header h1 {
+    font-size: 2.5rem;
+    margin: 0;
+    margin-bottom: 5px;
+}
+
+.main-header p {
+    font-size: 1.1rem;
+    color: #b0c4de; /* Color más claro para el subtítulo */
+    margin: 0;
+}
+
+.btn-volver {
+    background-color: transparent;
+    border: 1px solid white;
+    color: white;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.btn-volver:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ----------------------------------- */
+/* 2. Sección de Colecciones y Cuadrícula */
+/* ----------------------------------- */
+
+.collections-section {
+    padding: 30px 50px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.collections-section h2 {
+    font-size: 1.8rem;
+    color: #333;
+    margin-bottom: 25px;
+    font-weight: 600;
+}
+
+.collections-grid {
+    display: grid;
+    /* Define 3 columnas flexibles */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px; 
+}
+
+/* ----------------------------------- */
+/* 3. Estilos de la Tarjeta (CRÍTICO para imágenes limpias) */
+/* ----------------------------------- */
+
+.collection-card {
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden; 
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: transform 0.3s;
+    /* La tarjeta ahora mantiene su tamaño base, independientemente de la imagen */
+}
+
+.collection-card:hover {
+    transform: translateY(-5px); 
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+.card-image {
+    /* Establece una altura uniforme para el contenedor de la imagen */
+    height: 220px; 
+    width: 100%;
+    overflow: hidden;
+}
+
+.card-image img {
+    /* 🔑 CLAVE: La imagen debe cubrir el contenedor sin distorsionarse. */
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Asegura que la imagen llene el contenedor, recortando los bordes si es necesario, sin estirarla. */
+    object-position: center; /* Asegura que la parte central de la imagen sea visible. */
+    display: block;
+}
+
+.card-info {
+    padding: 15px;
+}
+
+.card-info h3 {
+    margin: 0 0 5px 0;
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+
+.description {
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 15px;
+}
+
+.details {
+    display: flex;
+    justify-content: space-between; 
+    font-size: 0.9rem;
+    color: #888;
+    padding-top: 10px;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* ----------------------------------- */
+/* 4. Botón Flotante */
+/* ----------------------------------- */
+
+.floating-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #16245a; 
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    font-size: 1.5rem;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000; /* Asegura que esté por encima del contenido */
+}
+
+/* ----------------------------------- */
+/* 5. Responsividad (Media Queries) */
+/* ----------------------------------- */
+
+@media (max-width: 768px) {
+    .main-header, .collections-section {
+        padding: 20px;
+    }
+
+    .collections-grid {
+        /* En pantallas pequeñas, usa 2 columnas o 1 */
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .btn-volver {
+        margin-top: 15px;
+    }
+}
