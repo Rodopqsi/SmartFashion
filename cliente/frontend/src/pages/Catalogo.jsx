@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { Link } from 'react-router-dom'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 
@@ -52,10 +53,10 @@ export default function Catalogo() {
 
   return (
     <div style={{fontFamily:'Inter, system-ui, Arial', padding:20}}>
-      <header style={{display:'flex', flexWrap:'wrap', gap:16, justifyContent:'space-between', alignItems:'center'}}>
+      <header style={{display:'flex', flexWrap:'wrap', gap:16, justifyContent:'center', alignItems:'center'}}>
         <h1 style={{margin:0}}>Catálogo</h1>
-        <div style={{display:'flex', gap:8, flexWrap:'wrap', alignItems:'center'}}>
-          <div style={{position:'relative'}}>
+        <div style={{display:'flex', gap:8, flexWrap:'wrap', alignItems:'center', justifySelf:'end' }}>
+          <div style={{position:'relative', display:'flex', justifyContent:'center', alignItems:'center' }}>
             <input
               placeholder="Buscar productos..."
               value={query}
@@ -101,27 +102,29 @@ export default function Catalogo() {
         <h2>Productos</h2>
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:16}}>
           {featured_products.map(p => (
-            <div key={p.id} style={{border:'1px solid #eee', borderRadius:8, overflow:'hidden'}}>
-              {p.image_preview ? (
-                <img src={p.image_preview} alt={p.nombre} style={{width:'100%', height:160, objectFit:'cover'}} />
-              ) : (
-                <div style={{width:'100%', height:160, background:'#f5f5f5'}} />
-              )}
-              <div style={{padding:12}}>
-                <div style={{fontWeight:600}}>{p.nombre}</div>
-                <div style={{color:'#666', fontSize:14, minHeight:40}}>{p.descripcion?.slice(0,80)}{(p.descripcion||'').length>80?'...':''}</div>
-                <div style={{marginTop:8, display:'flex', gap:8, alignItems:'baseline'}}>
-                  <span style={{fontSize:18, fontWeight:700}}>S/ {p.precio}</span>
-                  {p.precio_descuento && (
-                    <span style={{fontSize:14, color:'#16a34a'}}>S/ {p.precio_descuento}</span>
+            <Link key={p.id} to={`/producto/${p.id}`} state={{ product: p }} style={{ textDecoration:'none', color:'inherit' }}>
+              <div style={{border:'1px solid #eee', borderRadius:8, overflow:'hidden'}}>
+                {p.image_preview ? (
+                  <img src={p.image_preview} alt={p.nombre} style={{width:'100%', height:160, objectFit:'cover'}} />
+                ) : (
+                  <div style={{width:'100%', height:160, background:'#f5f5f5'}} />
+                )}
+                <div style={{padding:12}}>
+                  <div style={{fontWeight:600}}>{p.nombre}</div>
+                  <div style={{color:'#666', fontSize:14, minHeight:40}}>{p.descripcion?.slice(0,80)}{(p.descripcion||'').length>80?'...':''}</div>
+                  <div style={{marginTop:8, display:'flex', gap:8, alignItems:'baseline'}}>
+                    <span style={{fontSize:18, fontWeight:700}}>S/ {p.precio}</span>
+                    {p.precio_descuento && (
+                      <span style={{fontSize:14, color:'#16a34a'}}>S/ {p.precio_descuento}</span>
+                    )}
+                  </div>
+                  <div style={{fontSize:12, color:'#999'}}>Stock: {p.stock_total}</div>
+                  {p.categoria && (
+                    <div style={{fontSize:12, color:'#555'}}>Categoría: {p.categoria.nombre}</div>
                   )}
                 </div>
-                <div style={{fontSize:12, color:'#999'}}>Stock: {p.stock_total}</div>
-                {p.categoria && (
-                  <div style={{fontSize:12, color:'#555'}}>Categoría: {p.categoria.nombre}</div>
-                )}
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>

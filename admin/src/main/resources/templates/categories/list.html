@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout (title='Categorías', content=~{::section})}">
+<section>
+  <div class="header-row">
+    <h1>Categorías</h1>
+    <form method="post" th:action="@{/admin/categories}" style="display:flex;gap:8px;align-items:flex-end">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+      <label>Nombre
+        <input type="text" name="nombre" required />
+      </label>
+      <button class="btn" type="submit">Agregar</button>
+    </form>
+  </div>
+
+  <table class="table">
+    <thead><tr><th>ID</th><th>Nombre</th><th></th></tr></thead>
+    <tbody>
+      <tr th:if="${#lists.isEmpty(categories)}"><td colspan="3" class="muted">No hay categorías.</td></tr>
+      <tr th:each="c : ${categories}">
+        <td th:text="${c.id}"></td>
+        <td th:text="${c.nombre}"></td>
+        <td>
+          <form method="post" th:action="@{'/admin/categories/' + ${c.id} + '/delete'}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <button class="btn danger" type="submit">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+</html>

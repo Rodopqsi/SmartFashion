@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout (title=${'Editar '+ #strings.abbreviate(product.nombre,30)}, content=~{::section})}">
+<section>
+  <a th:href="@{/admin/products}">← Volver</a>
+  <h1 th:text="${product.nombre}">Editar</h1>
+
+  <div th:if="${param.err}">
+    <div style="margin:8px 0;padding:10px;border-radius:8px;background:#FEF2F2;color:#991B1B">[[${param.err}]]</div>
+  </div>
+
+  <div class="grid two">
+    <div>
+      <h3>Variantes</h3>
+      <form method="post" th:action="@{'/admin/products/' + ${product.id} + '/variants'}" class="stack">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <label>Talla
+          <select name="sizeId" required>
+            <option th:each="s : ${sizes}" th:value="${s.id}" th:text="${s.nombre}"></option>
+          </select>
+        </label>
+        <label>Color
+          <select name="colorId" required>
+            <option th:each="c : ${colors}" th:value="${c.id}" th:text="${c.nombre}"></option>
+          </select>
+        </label>
+        <label>Stock
+          <input type="number" name="stock" min="0" value="0" />
+        </label>
+        <button class="btn" type="submit">Agregar variante</button>
+      </form>
+
+      <table class="table" style="margin-top:10px">
+        <thead><tr><th>ID</th><th>Talla</th><th>Color</th><th>Stock</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="v : ${variants}">
+          <td th:text="${v.id}"></td>
+          <td th:text="${v.size != null ? v.size.nombre : '-'}"></td>
+          <td th:text="${v.color != null ? v.color.nombre : '-'}"></td>
+          <td th:text="${v.stock}"></td>
+          <td>
+            <form method="post" th:action="@{'/admin/products/' + ${product.id} + '/variants/' + ${v.id} + '/delete'}">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+              <button class="btn danger" type="submit">Eliminar</button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <h3>Imágenes por variante</h3>
+      <form method="post" th:action="@{'/admin/products/' + ${product.id} + '/images'}" enctype="multipart/form-data" class="stack">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <div class="row">
+          <label>Para talla
+            <select name="sizeId">
+              <option value="">(cualquiera)</option>
+              <option th:each="s : ${sizes}" th:value="${s.id}" th:text="${s.nombre}"></option>
+            </select>
+          </label>
+          <label>Para color
+            <select name="colorId">
+              <option value="">(cualquiera)</option>
+              <option th:each="c : ${colors}" th:value="${c.id}" th:text="${c.nombre}"></option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row" style="gap:16px;align-items:center">
+          <label style="display:flex;align-items:center;gap:6px">
+            <input type="radio" name="method" value="url" checked onclick="toggleImageMethod('url')" /> URL
+          </label>
+          <label style="display:flex;align-items:center;gap:6px">
+            <input type="radio" name="method" value="file" onclick="toggleImageMethod('file')" /> Archivos
+          </label>
+        </div>
+
+        <div id="urlBox">
+          <label>URLs (una por línea)</label>
+          <textarea name="urls" rows="4" placeholder="https://...&#10;https://..."></textarea>
+        </div>
+
+        <div id="fileBox" style="display:none">
+          <label>Subir imágenes locales</label>
+          <input type="file" name="files" multiple accept="image/*" />
+        </div>
+        <button class="btn" type="submit">Agregar imágenes</button>
+      </form>
+
+      <div class="thumbs" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px">
+        <div th:each="im : ${images}" style="position:relative">
+          <img th:src="${im.url}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #eee"/>
+          <form method="post" th:action="@{'/admin/products/' + ${product.id} + '/images/' + ${im.id} + '/delete'}" style="position:absolute;top:4px;right:4px">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <button class="btn danger" type="submit">×</button>
+          </form>
+          <div style="font-size:11px;color:#555;margin-top:2px" th:text="${(im.size != null ? im.size.nombre : '*') + ' | ' + (im.color != null ? im.color.nombre : '*')}"></div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:#555;margin-top:6px">Consejo: agrega primero imágenes por variante (Talla+Color). Si no existen, el cliente usa las de Color; si tampoco, usa las generales.</p>
+      <script>
+        function toggleImageMethod(which){
+          var urlBox = document.getElementById('urlBox');
+          var fileBox = document.getElementById('fileBox');
+          if(which==='file'){ urlBox.style.display='none'; fileBox.style.display='block'; }
+          else { urlBox.style.display='block'; fileBox.style.display='none'; }
+        }
+      </script>
+    </div>
+  </div>
+</section>
+</html>

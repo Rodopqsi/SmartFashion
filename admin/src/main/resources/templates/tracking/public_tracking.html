@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tracking de Envío</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}" />
+  <style>
+    .tracking-container{max-width:720px;margin:24px auto;padding:16px}
+  </style>
+  </head>
+<body>
+  <div class="tracking-container">
+    <h1 style="margin-top:0">Seguimiento de Envío</h1>
+    <div th:if="${notFound}">
+      <p>No encontramos un envío asociado al pedido <strong th:text="${orderId}">ORD</strong>.</p>
+    </div>
+    <div th:if="${shipment}">
+      <div style="margin:10px 0">
+        <div><strong>Pedido:</strong> <span th:text="${shipment.orderId}">ORD</span></div>
+        <div><strong>Empresa:</strong> <span th:text="${shipment.empresaEnvio != null ? shipment.empresaEnvio.nombre : '-'}"></span></div>
+        <div><strong>Estado:</strong> <span th:text="${shipment.status}">CREADO</span></div>
+        <div><strong>Tracking:</strong> <span th:text="${shipment.codigoTracking}">TRK</span></div>
+        <div><strong>Contacto:</strong> <span th:text="${shipment.emailDestino != null ? shipment.emailDestino : '-'}"></span> · <span th:text="${shipment.telefonoDestino != null ? shipment.telefonoDestino : '-'}"></span></div>
+      </div>
+      <h3>Línea de tiempo</h3>
+      <ul style="list-style:none;padding:0;margin:0">
+        <li th:each="e : ${events}" style="padding:8px 0;border-bottom:1px solid #eee">
+          <div style="font-weight:600" th:text="${e.status}">ESTADO</div>
+          <div style="color:#6b7280" th:text="${#temporals.format(e.fecha, 'yyyy-MM-dd HH:mm')}">fecha</div>
+          <div th:text="${e.nota}">nota</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

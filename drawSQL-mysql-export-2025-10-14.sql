@@ -110,6 +110,40 @@ CREATE TABLE `favorito`(
     `id_producto` BIGINT UNSIGNED NOT NULL,
     `fecha_agregado` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE product_reviews (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    product_id BIGINT NOT NULL,
+    user_email VARCHAR(255) NOT NULL,
+    rating TINYINT NOT NULL,
+    text TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS orders (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_number VARCHAR(32) NOT NULL UNIQUE,
+  email VARCHAR(255),
+  subtotal DECIMAL(10,2) NOT NULL,
+  igv DECIMAL(10,2) NOT NULL,
+  total DECIMAL(10,2) NOT NULL,
+  created_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  product_id BIGINT NOT NULL,
+  size_id BIGINT NULL,
+  color_id BIGINT NULL,
+  qty INT NOT NULL,
+  unit_price DECIMAL(10,2) NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  name VARCHAR(255),
+  image VARCHAR(1024),
+  CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE usuario ADD COLUMN bloqueado TINYINT(1) NOT NULL DEFAULT 0 AFTER fecha_registro;
+
 ALTER TABLE
     `imagenes_producto` ADD CONSTRAINT `imagenes_producto_id_producto_foreign` FOREIGN KEY(`id_producto`) REFERENCES `Producto`(`id`);
 ALTER TABLE
@@ -124,6 +158,12 @@ ALTER TABLE
     `variaciones_producto` ADD CONSTRAINT `variaciones_producto_id_producto_foreign` FOREIGN KEY(`id_producto`) REFERENCES `Producto`(`id`);
 ALTER TABLE
     `imagenes_producto` ADD CONSTRAINT `imagenes_producto_id_color_foreign` FOREIGN KEY(`id_color`) REFERENCES `colores`(`id`);
+-- Añadir soporte opcional por talla para imágenes por variante
+-- MySQL Workbench en algunas versiones no soporta "ADD COLUMN IF NOT EXISTS"
+-- Usar una sentencia simple compatible para evitar Error 1064
+ALTER TABLE `imagenes_producto` ADD COLUMN `id_talla` BIGINT UNSIGNED NULL AFTER `id_color`;
+ALTER TABLE
+    `imagenes_producto` ADD CONSTRAINT `imagenes_producto_id_talla_foreign` FOREIGN KEY(`id_talla`) REFERENCES `tallas`(`id`);
 ALTER TABLE
     `pedido` ADD CONSTRAINT `pedido_id_carrito_foreign` FOREIGN KEY(`id_carrito`) REFERENCES `Carrito`(`id`);
 ALTER TABLE
@@ -152,3 +192,79 @@ ALTER TABLE
     `favorito` ADD CONSTRAINT `favorito_id_usuario_foreign` FOREIGN KEY(`id_usuario`) REFERENCES `usuario`(`id`);
 ALTER TABLE
     `favorito` ADD CONSTRAINT `favorito_id_producto_foreign` FOREIGN KEY(`id_producto`) REFERENCES `Producto`(`id`);
+
+CREATE TABLE `EmpresaEnvio`(
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `nombre` VARCHAR(255) NOT NULL UNIQUE,
+    `cobertura` VARCHAR(255) NOT NULL,
+    `tracking_url_base` VARCHAR(512) NULL,
+    `activo` TINYINT(1) NOT NULL DEFAULT 1
+);
+
+CREATE TABLE `CentroDistribucion`(
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `nombre` VARCHAR(255) NOT NULL,
+    `region` VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE `ReglaEnvio`(
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `origen_region` VARCHAR(255) NOT NULL,
+    `destino_region` VARCHAR(255) NOT NULL,
+    `id_empresa_envio` BIGINT UNSIGNED NOT NULL,
+    `prioridad` INT NOT NULL DEFAULT 1,
+    `costo` DECIMAL(10,2) NOT NULL DEFAULT 0.00
+);
+
+CREATE TABLE `Envio`(
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `order_id` VARCHAR(64) NOT NULL,
+    `id_centro_distribucion` BIGINT UNSIGNED NOT NULL,
+    `id_empresa_envio` BIGINT UNSIGNED NULL,
+    `status` VARCHAR(32) NOT NULL,
+    `destinatario` VARCHAR(255) NOT NULL,
+    `direccion` VARCHAR(512) NOT NULL,
+    `region_destino` VARCHAR(255) NOT NULL,
+    `codigo_tracking` VARCHAR(128) NULL,
+    `creado_en` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `costo_envio` DECIMAL(10,2) NULL
+);
+
+CREATE TABLE `EventoEnvio`(
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `id_envio` BIGINT UNSIGNED NOT NULL,
+    `status` VARCHAR(32) NOT NULL,
+    `fecha` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `nota` TEXT NULL
+);
+CREATE TABLE IF NOT EXISTS user_address (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_email VARCHAR(255) NOT NULL,
+  label VARCHAR(120) NULL,
+  nombre VARCHAR(255) NOT NULL,
+  telefono VARCHAR(50) NULL,
+  alt_telefono VARCHAR(50) NULL,
+  direccion VARCHAR(512) NOT NULL,
+  direccion_linea2 VARCHAR(512) NULL,
+  distrito VARCHAR(255) NULL,
+  ciudad VARCHAR(255) NULL,
+  region VARCHAR(255) NOT NULL,
+  estado VARCHAR(255) NULL,
+  pais VARCHAR(100) NULL,
+  codigo_postal VARCHAR(32) NULL,
+  referencia VARCHAR(512) NULL,
+  is_default TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Índices útiles para búsquedas por email y por predeterminada
+CREATE INDEX idx_user_address_user ON user_address (user_email);
+CREATE INDEX idx_user_address_default ON user_address (user_email, is_default);
+
+
+ALTER TABLE `ReglaEnvio` ADD CONSTRAINT `regla_envio_empresa_fk` FOREIGN KEY(`id_empresa_envio`) REFERENCES `EmpresaEnvio`(`id`);
+ALTER TABLE `Envio` ADD CONSTRAINT `envio_centro_fk` FOREIGN KEY(`id_centro_distribucion`) REFERENCES `CentroDistribucion`(`id`);
+ALTER TABLE `Envio` ADD CONSTRAINT `envio_empresa_fk` FOREIGN KEY(`id_empresa_envio`) REFERENCES `EmpresaEnvio`(`id`);
+ALTER TABLE `EventoEnvio` ADD CONSTRAINT `evento_envio_envio_fk` FOREIGN KEY(`id_envio`) REFERENCES `Envio`(`id`) ON DELETE CASCADE;
+ALTER TABLE orders ADD COLUMN status VARCHAR(32) NULL AFTER created_at;

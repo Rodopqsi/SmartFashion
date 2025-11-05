@@ -26,7 +26,38 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  const apiBase = '' // proxy maneja /api -> backend
+  const apiBase = ''
+  
+  const fetchWithAuth = useCallback(async (input, init={}) => {
+    const headers = { ...(init.headers || {}) }
+    let access = tokens?.access
+    let refresh = tokens?.refresh
+    if (access) headers['Authorization'] = `Bearer ${access}`
+    let res = await fetch(input, { ...init, headers })
+    if (res.status !== 401) return res
+    // Try refresh if we have a refresh token
+    if (!refresh) return res
+    try{
+      const r = await fetch(`${apiBase}/api/auth/token/refresh/`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ refresh }) })
+      const data = await r.json().catch(()=>null)
+      if (r.ok && data?.access){
+        const nextTokens = { access: data.access, refresh }
+        saveTokens(nextTokens)
+        // retry original request with new access
+        const retryHeaders = { ...(init.headers || {}) }
+        retryHeaders['Authorization'] = `Bearer ${data.access}`
+        res = await fetch(input, { ...init, headers: retryHeaders })
+      } else {
+        // refresh failed, logout
+        saveTokens(null)
+        saveUser(null)
+      }
+    }catch{
+      saveTokens(null)
+      saveUser(null)
+    }
+    return res
+  }, [tokens])
 
   const login = useCallback(async ({ email, password }) => {
     const res = await fetch(`${apiBase}/api/auth/token/`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ username: email, password }) })
@@ -92,7 +123,7 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
-  return <AuthContext.Provider value={{ user, tokens, login, register, verifyEmail, logout, googleLogin, completeGoogleUsername, requestPasswordReset, verifyPasswordReset }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, tokens, login, register, verifyEmail, logout, googleLogin, completeGoogleUsername, requestPasswordReset, verifyPasswordReset, fetchWithAuth }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth(){ return useContext(AuthContext) }

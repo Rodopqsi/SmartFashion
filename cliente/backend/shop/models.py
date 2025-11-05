@@ -44,3 +44,40 @@ class ImagenProducto(models.Model):
     class Meta:
         managed = False
         db_table = 'imagenes_producto'
+
+
+class ProductReview(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    product_id = models.BigIntegerField()
+    user_email = models.CharField(max_length=255)
+    rating = models.PositiveSmallIntegerField()
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'product_reviews'
+
+
+class UserAddress(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    user_email = models.CharField(max_length=255)
+    label = models.CharField(max_length=120, null=True)
+    nombre = models.CharField(max_length=255)
+    telefono = models.CharField(max_length=50, null=True)
+    alt_telefono = models.CharField(max_length=50, null=True)
+    direccion = models.CharField(max_length=512)
+    direccion_linea2 = models.CharField(max_length=512, null=True)
+    distrito = models.CharField(max_length=255, null=True)
+    ciudad = models.CharField(max_length=255, null=True)
+    region = models.CharField(max_length=255)
+    estado = models.CharField(max_length=255, null=True)
+    pais = models.CharField(max_length=100, null=True)
+    codigo_postal = models.CharField(max_length=32, null=True)
+    referencia = models.CharField(max_length=512, null=True)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = False
+        db_table = 'user_address'

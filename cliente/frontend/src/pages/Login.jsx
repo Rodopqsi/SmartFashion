@@ -3,7 +3,7 @@ import { useAuth } from '../auth.jsx'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../toast.jsx'
 import './Home.css'
-import regImg from '../../img/img_register.jpg'
+import regImg from '../../img/img_register2.jpg'
 import loginImg from '../../img/img_login.jpg'
 
 // Reutilizable para login o registro segun prop mode
@@ -18,6 +18,8 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
   const [verifyStep, setVerifyStep] = useState({ active:false, email:'', code:'' })
   const [googlePending, setGooglePending] = useState({ active:false, email:'', suggested:'', pending:'', username:'' })
+  const [googleWorking, setGoogleWorking] = useState(false)
+  const [googleError, setGoogleError] = useState('')
 
   const validators = {
     name: v => isLogin ? null : (!v.trim() ? 'Nombre requerido' : (v.trim().length < 2 ? 'Mínimo 2 caracteres' : null)),
@@ -69,12 +71,11 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
     }
   }
 
-  // Eliminado botón fake: el flujo real usa Google Identity Services (GSI)
-
   useEffect(()=>{
     window.onGoogleCredential = async (resp) => {
       if (!resp?.credential) { push('Credencial Google vacía','error'); return }
       try {
+        setGoogleError(''); setGoogleWorking(true)
         const data = await googleLogin(resp.credential)
         if (data?.pending) {
           setGooglePending({ active:true, email:data.email, suggested:data.suggested_username, pending:data.pending, username:data.suggested_username })
@@ -84,10 +85,14 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
           navigate('/')
         }
       } catch(e){
+        console.error('Google login error:', e)
+        setGoogleError(e?.message || 'No se pudo iniciar sesión con Google')
         push(e.message || 'Error Google','error')
+      } finally {
+        setGoogleWorking(false)
       }
     }
-    // Inicializar y renderizar el botón GSI de forma explícita
+
     let attempts = 0
     const maxAttempts = 20
     const tryInit = () => {
@@ -118,10 +123,11 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
       <div className="login-form-pane">
         <div className="brand-block">
           <h1 className="brand-title">SmartFashion</h1>
-          <p className="brand-sub">{isLogin ? 'Inicia sesión con tu cuenta' : 'Crea tu cuenta'}</p>
+          <p className="brand-sub">{isLogin ? 'Inicia sesión con tu cuenta' : 'Crea tu cuenta'} </p>
           {!isLogin && (
             <p className="brand-desc">Obtén acceso a las marcas más grandes.<br/>Hazte miembro hoy.</p>
           )}
+          
         </div>
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {!isLogin && (
@@ -190,14 +196,55 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
             {submitting ? 'Procesando...' : (isLogin ? 'INICIAR SESIÓN' : 'CREAR CUENTA')}
           </button>
           <div className="divider"><span>{isLogin ? 'O inicia sesión con' : 'O regístrate con'}</span></div>
-          {/* Botón Google renderizado por GSI aquí */}
           <div id="googleSignInDiv" style={{ display:'flex', justifyContent:'center' }} />
+          {googleWorking && <p style={{textAlign:'center', fontSize:12, color:'#555', marginTop:6}}>Procesando Google…</p>}
+          {!!googleError && <p style={{textAlign:'center', fontSize:12, color:'#b91c1c', marginTop:6}}>{googleError}</p>}
+          {import.meta.env.DEV && (
+            <div style={{display:'flex', justifyContent:'center', marginTop:8}}>
+              <button type="button" className="oauth-btn" onClick={async ()=>{
+                try {
+                  const data = await googleLogin('FAKE_GOOGLE_ID_TOKEN')
+                  if (data?.pending) {
+                    setGooglePending({ active:true, email:data.email, suggested:data.suggested_username, pending:data.pending, username:data.suggested_username })
+                    push('Elige tu nombre de usuario (modo dev)', 'info')
+                  } else {
+                    push('Google (dev) OK','success'); navigate('/')
+                  }
+                } catch(e){ push(e.message||'Error Google dev','error') }
+              }}>Probar Google (dev)</button>
+            </div>
+          )}
           <p className="alt-link">
             {isLogin ? '¿Aún no tienes cuenta? ' : '¿Ya tienes cuenta? '}
-            <button type="button" className="link-btn inline" onClick={onSwitch}>{isLogin ? 'Crear cuenta' : 'Iniciar sesión'}</button>
+            <button
+              type="button"
+              className="link-btn inline"
+              onClick={() => {
+                if (typeof onSwitch === 'function') {
+                  onSwitch()
+                } else {
+                  navigate(isLogin ? '/register' : '/login')
+                }
+              }}
+            >
+              {isLogin ? 'Crear cuenta' : 'Iniciar sesión'}
+            </button>
           </p>
           <div className="back-wrap">
-            <button type="button" className="link-btn xs" onClick={onBack}>← Volver</button>
+            <button
+              type="button"
+              className="link-btn xs"
+              onClick={() => {
+                if (typeof onBack === 'function') {
+                  onBack()
+                } else {
+                  // intenta volver, si no hay historial, ir a inicio
+                  if (window.history.length > 1) navigate(-1); else navigate('/')
+                }
+              }}
+            >
+              ← Volver
+            </button>
           </div>
         </form>
       </div>
@@ -205,7 +252,6 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
         <div className="login-img" style={{ position:'relative', width:'100%', height:'100%' }}>
           <img
             src={isLogin ? loginImg : regImg}
-            alt="Auth side"
             style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
           />
         </div>

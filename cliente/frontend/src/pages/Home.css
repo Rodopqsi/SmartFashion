@@ -32,7 +32,7 @@ html, body { background: var(--color-bg); color: var(--color-text); font-family:
 #nav-bar {
   position: fixed; top:0; left:0; right:0;
   display:flex; justify-content:space-around; align-items:center;
-  padding:1.1rem 2rem; z-index:60;
+  padding:1.1rem; z-index:60;
   backdrop-filter:blur(var(--nav-blur)); -webkit-backdrop-filter:blur(var(--nav-blur));
   box-shadow:0 4px 24px rgba(0,0,0,0.04);
   border-bottom:1px solid var(--color-border);
@@ -51,7 +51,7 @@ html, body { background: var(--color-bg); color: var(--color-text); font-family:
 .theme-dark .icon-btn:hover { background:#232830; }
 
 /* HERO */
-.hero-full { position:relative; width:100%; min-height:var(--hero-height); min-height:var(--hero-min-height); background-size:cover; background-position:center center; display:flex; justify-content:center; align-items:center; }
+.hero-full { position:relative; width:100%; min-height:var(--hero-height); min-height:var(70px); background-size:cover; background-position:center center; display:flex; justify-content:center; align-items:center; }
 .fashion-title { position:absolute; font-size:var(--hero-title-size); letter-spacing:.05em; font-weight:600; color:var(--color-text); mix-blend-mode:multiply; text-align:center; margin:0; opacity:.9; }
 .shop-now-btn { position:absolute; left:30px; bottom:30px; padding:14px 24px; border-radius:var(--radius-pill); background:var(--color-text); color:var(--color-bg); text-decoration:none; width:140px; display:flex; justify-content:center; align-items:center; font-weight:500; font-size:14px; box-shadow:0 4px 16px -4px rgba(0,0,0,.35); transition:background var(--transition-fast), transform var(--transition-fast), color var(--transition-fast); }
 .shop-now-btn:hover { background:var(--color-accent); transform:translateY(-2px); color:#fff; }
@@ -70,7 +70,7 @@ html, body { background: var(--color-bg); color: var(--color-text); font-family:
 
 /* LOGIN LAYOUT */
 .login-layout { display:flex; min-height:calc(100vh - var(--nav-height)); width:100%; }
-.login-form-pane { flex:1; display:flex; justify-content:center; padding:4rem 3rem 3rem; }
+.login-form-pane { flex:1; display:flex; flex-direction: column; justify-content:center; padding:4rem 3rem 3rem; }
 .brand-block { margin-bottom:2rem; }
 .brand-title { font-size:2.6rem; font-weight:600; margin:0 0 .35rem; letter-spacing:.5px; }
 .brand-sub { margin:0; font-size:.95rem; color:var(--color-text-soft); position:relative; padding-bottom:.75rem; }
@@ -123,7 +123,7 @@ html, body { background: var(--color-bg); color: var(--color-text); font-family:
 
 /* CATALOGO / SECTIONS */
 .catalogo-wrapper { padding-top:40px; }
-.home-root { padding-top:60px; }
+.home-root { padding-top:65px;}
 
 /* INTRO (si se reusa) */
 .intro-block { margin:80px 0 20px; padding:0 24px; }

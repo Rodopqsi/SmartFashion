@@ -13,4 +13,6 @@ urlpatterns = [
     path('api/auth/password_reset/verify/', auth_views.password_reset_verify, name='password_reset_verify'),
     path('api/auth/token/', auth_views.CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', auth_views.CustomTokenRefreshView.as_view(), name='token_refresh'),
+    # SSO handoff for Admin panel (Django -> Spring Boot)
+    path('sso/admin/', auth_views.admin_sso_redirect, name='admin_sso'),
 ]

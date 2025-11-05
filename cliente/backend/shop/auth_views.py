@@ -16,6 +16,10 @@ from django.utils.crypto import get_random_string
 from django.utils import timezone
 from django.core.mail import send_mail
 import os
+import base64, hmac, hashlib, json, time
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -24,6 +28,19 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['username'] = user.username
         token['email'] = user.email
         return token
+
+    def validate(self, attrs):
+        """
+        Permite iniciar sesión usando email en lugar de username.
+        Si 'username' parece un email, intentamos resolver el username real.
+        """
+        uname = attrs.get('username') or ''
+        if '@' in uname:
+            # Permitir login con email aunque existan duplicados: usar el primero.
+            u = User.objects.filter(email=uname).order_by('id').first()
+            if u:
+                attrs['username'] = u.username
+        return super().validate(attrs)
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -88,9 +105,8 @@ def verify_email(request):
         return Response({'detail': 'Código expirado o no encontrado'}, status=400)
     if str(expected) != str(code):
         return Response({'detail': 'Código inválido'}, status=400)
-    try:
-        user = User.objects.get(email=email)
-    except User.DoesNotExist:
+    user = User.objects.filter(email=email).order_by('id').first()
+    if not user:
         return Response({'detail': 'Usuario no encontrado'}, status=404)
     user.is_active = True
     user.save()
@@ -112,12 +128,13 @@ def google_oauth(request):
     client_id = (os.getenv('GOOGLE_CLIENT_ID') or '').strip()
     # Fallback para desarrollo: si token == 'FAKE_GOOGLE_ID_TOKEN' y DEBUG, crear usuario dummy
     debug_mode = os.getenv('DEBUG', 'True').lower() in ('1', 'true', 'yes')
-    if not client_id:
-        msg = 'GOOGLE_CLIENT_ID no configurado en backend'
-        return Response({'detail': msg}, status=500)
     if token == 'FAKE_GOOGLE_ID_TOKEN' and debug_mode:
         idinfo = { 'email': 'demo_google@example.com' }
     else:
+        if not client_id:
+            msg = 'GOOGLE_CLIENT_ID no configurado en backend'
+            # En debug, devolver 400 en lugar de 500 para claridad
+            return Response({'detail': msg}, status=400 if debug_mode else 500)
         try:
             idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), audience=client_id)
             # Validaciones adicionales recomendadas por Google
@@ -135,10 +152,8 @@ def google_oauth(request):
     email = idinfo.get('email')
     if not email:
         return Response({'detail': 'Email Google no disponible'}, status=400)
-    try:
-        user = User.objects.get(email=email)
-        created = False
-    except User.DoesNotExist:
+    user = User.objects.filter(email=email).order_by('id').first()
+    if not user:
         # Primera vez: requerir selección de username en cliente
         suggested = email.split('@')[0]
         signer = TimestampSigner()
@@ -149,6 +164,7 @@ def google_oauth(request):
             'suggested_username': suggested,
             'pending': pending
         }, status=202)
+    created = False
     refresh = RefreshToken.for_user(user)
     return Response({
         'user': {'id': user.id, 'username': user.username, 'email': user.email},
@@ -205,9 +221,8 @@ def password_reset_request(request):
         return Response({'detail': 'Demasiados intentos, intente más tarde'}, status=429)
     cache.set(k_email, email_count + 1, timeout=900)
     cache.set(k_ip, ip_count + 1, timeout=900)
-    try:
-        user = User.objects.get(email=email)
-    except User.DoesNotExist:
+    user = User.objects.filter(email=email).order_by('id').first()
+    if not user:
         # No revelar si el email existe por seguridad; responder OK
         return Response({'detail': 'reset_sent'}, status=200)
     # Generar código de 6 dígitos y almacenarlo en cache por 15 minutos
@@ -248,9 +263,8 @@ def password_reset_verify(request):
         return Response({'detail': 'Código expirado o no encontrado'}, status=400)
     if str(expected) != str(code):
         return Response({'detail': 'Código inválido'}, status=400)
-    try:
-        user = User.objects.get(email=email)
-    except User.DoesNotExist:
+    user = User.objects.filter(email=email).order_by('id').first()
+    if not user:
         return Response({'detail': 'Usuario no encontrado'}, status=404)
     # Validar la nueva contraseña
     try:
@@ -261,3 +275,38 @@ def password_reset_verify(request):
     user.save()
     cache.delete(f'password_reset:{email}')
     return Response({'detail': 'password_reset_success'}, status=200)
+
+
+# --- SSO Admin redirect (Django -> Spring Boot) ---
+@login_required
+def admin_sso_redirect(request):
+    """If the logged-in user is staff/superuser, mint a short-lived HMAC token
+    and redirect to Spring Boot /sso/login?token=...
+    Otherwise, redirect to home.
+    """
+    user = request.user
+    # Only allow admin users
+    if not (user.is_staff or user.is_superuser):
+        return redirect('/')
+
+    shared = getattr(settings, 'SSO_SHARED_SECRET', '')
+    spring_endpoint = getattr(settings, 'SPRING_ADMIN_SSO_ENDPOINT', 'http://localhost:8081/sso/login')
+    if not shared:
+        # If not configured, just return to home for safety
+        return redirect('/')
+
+    now = int(time.time())
+    exp = now + 60  # must match Spring's sso.max-age
+    payload = {
+        'sub': str(user.id),
+        'email': user.email or user.username,
+        'role': 'ADMIN',
+        'iat': now,
+        'exp': exp,
+    }
+    payload_bytes = json.dumps(payload, separators=(',', ':')).encode('utf-8')
+    # Sign the RAW JSON bytes (Spring verifies HMAC over decoded payload bytes)
+    sig = hmac.new(shared.encode('utf-8'), payload_bytes, hashlib.sha256).hexdigest()
+    payload_b64 = base64.urlsafe_b64encode(payload_bytes).rstrip(b'=')
+    token = payload_b64.decode('utf-8') + '.' + sig
+    return redirect(f"{spring_endpoint}?token={token}")

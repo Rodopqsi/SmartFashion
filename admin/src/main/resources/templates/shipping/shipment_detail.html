@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(title=${title}, content=~{::section})}">
+<section>
+  <div class="header-row">
+    <h2 th:text="'Envío #' + ${shipment.id}">Envío</h2>
+    <a class="btn secondary" th:href="@{/admin/shipments}">Volver</a>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+    <div>
+      <div style="margin-bottom:12px">
+        <div><strong>Pedido:</strong> <span th:text="${shipment.orderId}">ORD</span></div>
+        <div><strong>Centro:</strong> <span th:text="${shipment.centroDistribucion != null ? shipment.centroDistribucion.nombre : '-'}"></span></div>
+        <div><strong>Empresa:</strong> <span th:text="${shipment.empresaEnvio != null ? shipment.empresaEnvio.nombre : '-'}"></span></div>
+        <div><strong>Destino:</strong> <span th:text="${shipment.regionDestino}">Región</span></div>
+        <div><strong>Destinatario:</strong> <span th:text="${shipment.destinatario}">Nombre</span></div>
+        <div><strong>Dirección:</strong> <span th:text="${shipment.direccion}">Dir</span></div>
+  <div><strong>Contacto:</strong> <span th:text="${shipment.emailDestino != null ? shipment.emailDestino : '-'}"></span> · <span th:text="${shipment.telefonoDestino != null ? shipment.telefonoDestino : '-'}"></span></div>
+        <div><strong>Status:</strong> <span th:text="${shipment.status}">CREADO</span></div>
+        <div><strong>Costo:</strong> S/ <span th:text="${shipment.costoEnvio != null ? #numbers.formatDecimal(shipment.costoEnvio,1,'COMMA',2,'POINT') : '-'}">0.00</span></div>
+        <div><strong>Tracking:</strong> <span th:text="${shipment.codigoTracking}">TRK</span></div>
+        <div style="margin-top:8px">
+          <a th:href="@{'/tracking/' + ${shipment.orderId}}" target="_blank">Ver tracking público</a>
+        </div>
+      </div>
+
+      <form th:action="@{'/admin/shipments/' + ${shipment.id} + '/status'}" method="post" style="margin-bottom:12px">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <label>
+            Nuevo estado
+            <select name="status">
+              <option th:each="st : ${statuses}" th:value="${st}" th:text="${st}"></option>
+            </select>
+          </label>
+          <label style="flex:1">
+            Nota (opcional)
+            <input type="text" name="nota" placeholder="Mensaje visible en el tracking" />
+          </label>
+          <button type="submit" class="btn">Actualizar estado</button>
+        </div>
+      </form>
+
+      <form th:action="@{'/admin/shipments/' + ${shipment.id} + '/assign'}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <label>
+            Reasignar empresa
+            <select name="companyId">
+              <option th:each="c : ${companies}" th:value="${c.id}" th:selected="${shipment.empresaEnvio != null and c.id == shipment.empresaEnvio.id}" th:text="${c.nombre}"></option>
+            </select>
+          </label>
+          <label style="flex:1">
+            Nota (opcional)
+            <input type="text" name="nota" placeholder="Motivo" />
+          </label>
+          <button type="submit" class="btn">Reasignar</button>
+        </div>
+      </form>
+    </div>
+    <div>
+      <h3>Seguimiento</h3>
+      <ul style="list-style:none;padding:0;margin:0">
+        <li th:each="e : ${events}" style="padding:8px 0;border-bottom:1px solid #eee">
+          <div style="font-weight:600" th:text="${e.status}">ESTADO</div>
+          <div style="color:#6b7280" th:text="${#temporals.format(e.fecha, 'yyyy-MM-dd HH:mm')}">fecha</div>
+          <div th:text="${e.nota}">nota</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+</html>
