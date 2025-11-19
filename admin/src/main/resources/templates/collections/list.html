@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="layout :: layout('Colecciones', ~{::section})">
+<section>
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+      <h2 style="margin:0">Colecciones</h2>
+      <a class="btn" th:href="@{/admin/collections/new}">Nueva</a>
+    </div>
+    <table class="table" style="margin-top:10px;">
+      <thead>
+        <tr>
+          <th>ID</th><th>Nombre</th><th>Slug</th><th>Activo</th><th>Orden</th><th>Productos</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="c : ${items}">
+          <td th:text="${c.id}">1</td>
+          <td th:text="${c.nombre}">Verano</td>
+          <td th:text="${c.slug}">verano</td>
+          <td th:text="${c.activo} ? 'Sí' : 'No'">Sí</td>
+          <td th:text="${c.orden}">0</td>
+          <td th:text="${#lists.size(c.productos)}">0</td>
+          <td>
+            <a th:href="@{'/admin/collections/' + ${c.id}}">Editar</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+</html>

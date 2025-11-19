@@ -15,6 +15,7 @@ export default function Cart(){
   const [serverTotals, setServerTotals] = React.useState(null)
   const [checking, setChecking] = React.useState(false)
   const [addressId, setAddressId] = React.useState(null)
+  const [addressWarning, setAddressWarning] = React.useState(false)
 
   const preview = async () => {
     if (!items?.length) return
@@ -30,24 +31,28 @@ export default function Cart(){
 
   React.useEffect(()=>{ preview() }, [items])
 
+  // Start Stripe Checkout session
   const finalize = async () => {
     if (!items?.length) return
     try{
       const payload = {
         userEmail,
-        items: items.map(i => ({ product_id: i.productId, size_id: i.sizeId, color_id: i.colorId, qty: i.qty })),
-        address_id: addressId || undefined
+        address_id: addressId || undefined,
+        items: items.map(i => ({ product_id: i.productId, size_id: i.sizeId, color_id: i.colorId, qty: i.qty }))
       }
-  const headers = { 'Content-Type':'application/json' }
-  const res = await fetchWithAuth(`${API_BASE}/api/checkout/confirm/`, { method:'POST', headers, body: JSON.stringify(payload) })
-      if (res.ok){
-        const j = await res.json()
-        clear()
-        navigate(`/checkout/success?order=${encodeURIComponent(j.order_number || 'LOCAL-'+Date.now())}`)
-      }else{
-        clear()
-        navigate(`/checkout/success?order=${encodeURIComponent('LOCAL-'+Date.now())}`)
+      const headers = { 'Content-Type':'application/json' }
+      const res = await fetchWithAuth(`${API_BASE}/api/payments/create_session/`, { method:'POST', headers, body: JSON.stringify(payload) })
+      const j = await res.json().catch(()=>null)
+      if (res.ok && j?.url){
+        // Leave cart for now; we'll clear on webhook/order success
+        window.location.href = j.url
+        return
       }
+      // Fallback: if payments not configured, finish without gateway
+      const fallback = await fetchWithAuth(`${API_BASE}/api/checkout/confirm/`, { method:'POST', headers, body: JSON.stringify(payload) })
+      const fj = await fallback.json().catch(()=>null)
+      clear()
+      navigate(`/checkout/success?order=${encodeURIComponent(fj?.order_number || 'LOCAL-'+Date.now())}`)
     }catch{
       clear()
       navigate(`/checkout/success?order=${encodeURIComponent('LOCAL-'+Date.now())}`)
@@ -65,7 +70,7 @@ export default function Cart(){
       ) : (
         <div style={{display:'grid', gridTemplateColumns:'1fr 360px', gap:16}}>
           <div style={{display:'flex', flexDirection:'column', gap:12}}>
-            <AddressPicker value={addressId} onChange={setAddressId} />
+            <AddressPicker value={addressId} onChange={id => { setAddressId(id); setAddressWarning(false); }} />
             {items.map(i => (
               <div key={i.key} style={itemCard}>
                 <div style={{display:'grid', gridTemplateColumns:'96px 1fr 120px', alignItems:'center', gap:12}}>
@@ -97,7 +102,24 @@ export default function Cart(){
             <div style={row}><span>IGV ({Math.round(IGV_RATE*100)}%)</span><span>S/ {(serverTotals?.igv ?? igv).toFixed(2)}</span></div>
             <hr style={{margin:'10px 0', border:'none', borderTop:'1px solid #eee'}}/>
             <div style={{...row, fontWeight:800}}><span>Total</span><span>S/ {(serverTotals?.total ?? total).toFixed(2)}</span></div>
-            <button onClick={finalize} style={{...btnPrimary, width:'100%', marginTop:12}}>Finalizar compra</button>
+            {addressWarning && (
+              <div style={{color:'#b91c1c', background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:8, padding:'8px 10px', marginBottom:8, fontSize:13, textAlign:'center'}}>
+                Debes seleccionar una dirección de envío antes de finalizar la compra.
+              </div>
+            )}
+            <button
+              onClick={() => {
+                if (!addressId) {
+                  setAddressWarning(true);
+                  return;
+                }
+                setAddressWarning(false);
+                finalize();
+              }}
+              style={{...btnPrimary, width:'100%', marginTop:12}}
+            >
+              Finalizar compra
+            </button>
             <button onClick={()=>navigate('/catalogo')} style={{...btnSecondary, width:'100%', marginTop:8}}>Continuar comprando</button>
             <div style={{marginTop:12, fontSize:11, color:'#6b7280', textAlign:'center'}}>Compra 100% segura. Tus datos están protegidos.</div>
           </aside>

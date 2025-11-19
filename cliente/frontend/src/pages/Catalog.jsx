@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './Home.css'
-import { Link, useNavigate } from 'react-router-dom'
+import './CatalogResponsive.css'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useFavorites } from '../favorites.jsx'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 
 export default function Catalog() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { isFavorite, toggleFavorite } = useFavorites() || {}
   // Remote data
   const [data, setData] = useState(null)
@@ -18,19 +20,23 @@ export default function Catalog() {
   // Filters/search
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [query, setQuery] = useState('')
-  const [typing, setTyping] = useState(false)
+  // typing spinner removed
   const [selectedSize, setSelectedSize] = useState(null)
   const [selectedColor, setSelectedColor] = useState(null)
   const [priceRange, setPriceRange] = useState('all') // 'all' | '0-100' | '100-200' | '200+'
   const debounceRef = useRef(null)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(12)
 
-  const fetchHome = (cat, qVal, size, color, { showSpinner = true } = {}) => {
+  const fetchHome = (cat, qVal, size, color, pageVal, limitVal, { showSpinner = true } = {}) => {
     if (showSpinner) setLoading(true)
     const params = new URLSearchParams()
     if (cat) params.append('category_id', cat)
     if (qVal) params.append('q', qVal)
     if (size) params.append('size', size)
     if (color) params.append('color', color)
+    if (pageVal) params.append('page', pageVal)
+    if (limitVal) params.append('limit', limitVal)
     fetch(`${API_BASE}/api/home/${params.toString() ? `?${params.toString()}` : ''}`)
       .then(res => res.json())
       .then(json => { setData(json.data); setLoading(false); setError(null) })
@@ -39,19 +45,25 @@ export default function Catalog() {
 
   // Initial fetch and filter changes (except query which is debounced)
   useEffect(() => {
-    fetchHome(selectedCategory, query, selectedSize, selectedColor)
-  }, [selectedCategory, selectedSize, selectedColor])
+    fetchHome(selectedCategory, query, selectedSize, selectedColor, page, limit)
+  }, [selectedCategory, selectedSize, selectedColor, page, limit])
 
   // Debounced search
   useEffect(() => {
-    setTyping(true)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      fetchHome(selectedCategory, query, selectedSize, selectedColor, { showSpinner: false })
-      setTyping(false)
+      setPage(1)
+      fetchHome(selectedCategory, query, selectedSize, selectedColor, 1, limit, { showSpinner: false })
     }, 350)
     return () => clearTimeout(debounceRef.current)
   }, [query])
+
+  // Accept query from URL (?q=...)
+  useEffect(() => {
+    const qParam = new URLSearchParams(location.search).get('q') || ''
+    setQuery(qParam)
+    setPage(1)
+  }, [location.search])
 
   // Fetch facet lists
   useEffect(() => {
@@ -61,6 +73,10 @@ export default function Catalog() {
 
   const categories = data?.categories || []
   const allProducts = data?.featured_products || []
+  const pagination = data?.pagination || { page, limit, total: allProducts.length }
+  const totalPages = Math.max(1, Math.ceil((pagination.total || 0) / (pagination.limit || limit)))
+  const startIdx = pagination.total ? ((pagination.page || page) - 1) * (pagination.limit || limit) + 1 : 0
+  const endIdx = pagination.total ? Math.min(pagination.total, startIdx + (allProducts?.length || 0) - 1) : 0
 
   // Client-side price filter
   const products = useMemo(() => {
@@ -84,8 +100,8 @@ export default function Catalog() {
   }
 
   return (
-    <div style={pageStyle}>
-      <div style={topBarStyle}>
+    <div className="catalog-page">
+      <div className="catalog-top">
         <div style={{ position: 'relative', flex: 1, maxWidth: 520 }}>
           <input
             placeholder="Buscar productos..."
@@ -93,15 +109,10 @@ export default function Catalog() {
             onChange={(e) => setQuery(e.target.value)}
             style={searchInputStyle}
           />
-          {typing && <span style={spinnerStyle}>⌛</span>}
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button title="Favoritos" style={iconBtn}>♡</button>
-          <button title="Perfil" style={iconBtn}>👤</button>
         </div>
       </div>
 
-      <div style={contentStyle}>
+      <div className="catalog-layout">
         {/* Left filters */}
         <aside style={leftColStyle}>
           <div style={filtersGroup}>
@@ -149,7 +160,7 @@ export default function Catalog() {
           {loading && !data && <div style={{ padding: 20 }}>Cargando...</div>}
           {error && <div style={{ padding: 20, color: 'red' }}>{error}</div>}
           {!loading && !error && (
-            <div style={gridStyle}>
+            <div className="products-grid">
               {products.map(p => (
                 <Link key={p.id} to={`/producto/${p.id}`} state={{ product: p }} style={{ textDecoration:'none', color:'inherit', position:'relative' }}>
                   <article style={cardStyle}>
@@ -184,6 +195,22 @@ export default function Catalog() {
               )}
             </div>
           )}
+          {/* Pagination controls */}
+          {!loading && !error && (
+            <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:12, marginTop:16}}>
+              <button
+                disabled={(pagination.page || page) <= 1}
+                onClick={()=> setPage(p => Math.max(1, p-1))}
+                style={{...iconBtn, opacity: (pagination.page || page) <= 1 ? .5 : 1, cursor: (pagination.page || page) <= 1 ? 'not-allowed' : 'pointer'}}
+              >Anterior</button>
+              <span style={{fontSize:13, color:'#555'}}>Página {pagination.page || page} de {totalPages} — {pagination.total ? `Mostrando ${startIdx}-${endIdx} de ${pagination.total}` : ''}</span>
+              <button
+                disabled={(pagination.page || page) >= totalPages}
+                onClick={()=> setPage(p => Math.min(totalPages, p+1))}
+                style={{...iconBtn, opacity: (pagination.page || page) >= totalPages ? .5 : 1, cursor: (pagination.page || page) >= totalPages ? 'not-allowed' : 'pointer'}}
+              >Siguiente</button>
+            </div>
+          )}
         </main>
       </div>
     </div>
@@ -216,7 +243,7 @@ const chipStyle = (active) => ({
   fontSize: 13
 })
 const searchInputStyle = { width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 12 }
-const spinnerStyle = { position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, opacity: .7 }
+// spinner removed
 const clearBtnStyle = { marginTop: 10, padding: '6px 10px', borderRadius: 8, border: '1px solid #f87171', background: '#fff', color: '#b91c1c', cursor: 'pointer' }
 const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }
 const cardStyle = { border: '1px solid #eee', borderRadius: 10, overflow: 'hidden', background: '#fff' }

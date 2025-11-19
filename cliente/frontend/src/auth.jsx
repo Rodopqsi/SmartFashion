@@ -96,8 +96,8 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
-  const completeGoogleUsername = useCallback(async ({ username, pending }) => {
-    const res = await fetch(`${apiBase}/api/auth/google/complete/`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ username, pending }) })
+  const completeGoogleUsername = useCallback(async ({ username, pending, password }) => {
+    const res = await fetch(`${apiBase}/api/auth/google/complete/`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ username, pending, password }) })
     const data = await parseRes(res)
     if (!res.ok) throw new Error(data.detail || 'No se pudo completar Google')
     saveTokens({ access:data.access, refresh:data.refresh })

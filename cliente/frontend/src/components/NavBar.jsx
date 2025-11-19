@@ -47,6 +47,37 @@ export default function NavBar(){
   const scrollAlpha = 0.9 * scrollFactor
   const navBg = `rgba(${theme === 'dark' ? '15,17,21' : '255,255,255'}, ${scrollAlpha.toFixed(3)})`
 
+  const scrollOrNavigate = (id) => {
+    if (location.pathname !== '/') {
+      navigate(`/#${id}`)
+      return
+    }
+    const el = document.getElementById(id)
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' })
+  }
+
+
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const searchRef = useRef(null)
+    const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.matchMedia('(max-width: 640px)').matches : false))
+
+    useEffect(() => {
+      const mq = window.matchMedia('(max-width: 640px)')
+      const update = () => setIsMobile(mq.matches)
+      mq.addEventListener('change', update)
+      update()
+      return () => mq.removeEventListener('change', update)
+    }, [])
+
+  const doSearch = useCallback(() => {
+    const q = (searchTerm || '').trim()
+    if (!q) return
+
+    navigate(`/catalogo?q=${encodeURIComponent(q)}`)
+    setSearchOpen(false)
+  }, [navigate, searchTerm])
+
   return (
     <nav id="nav-bar" className={scrolled ? 'scrolled' : ''} style={{ background: navBg }}>
       <div className="nav-left">
@@ -54,22 +85,54 @@ export default function NavBar(){
           {theme === 'light' ? '🌙' : '☀️'}
         </button>
         <div className="vertical-sep">|</div>
-        <Link to="/" className="icon-btn" aria-label="Home">Inicio</Link>
+        <Link to="/" className="icon-btn" aria-label="Home" style={{textDecoration:null}}>Inicio</Link>
         <div className="vertical-sep">|</div>
-        <button className="icon-btn" aria-label="Buscar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <span>Search</span>
-        </button>
+        <div
+          ref={searchRef}
+          onMouseEnter={()=> setSearchOpen(true)}
+          onMouseLeave={()=> { if (!document.activeElement || document.activeElement !== searchRef.current?.querySelector('input')) setSearchOpen(false) }}
+          style={{
+            display:'flex', alignItems:'center', gap:8,
+              width: searchOpen ? (isMobile ? 200 : 260) : 34,
+            height: 36,
+            transition:'width .3s ease',
+            overflow:'hidden',
+            background:'#ffffffff',
+            borderRadius: 9999,
+            padding: '0 10px',
+            boxShadow: '2px 2px 20px rgba(0,0,0,0.08)'
+          }}
+        >
+          <button
+            onClick={doSearch}
+            title="Buscar"
+            style={{ display:'grid', placeItems:'center', width:24, height:24, border:'none', background:'transparent', cursor:'pointer' }}
+            aria-label="Buscar"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={20} height={20} style={{ fill:'#000000ff' }}>
+              <path d="M18.9 16.776A10.539 10.539 0 1 0 16.776 18.9l5.1 5.1L24 21.88Zm-8.4 1.224A7.5 7.5 0 1 1 18 10.5 7.507 7.507 0 0 1 10.5 18Z"/>
+            </svg>
+          </button>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e)=> setSearchTerm(e.target.value)}
+            onFocus={()=> setSearchOpen(true)}
+            onBlur={()=> { if (!(searchTerm||'').trim()) setSearchOpen(false) }}
+            onKeyDown={(e)=> { if (e.key === 'Enter') doSearch() }}
+            placeholder="Buscar..."
+            aria-label="Buscar productos"
+            style={{ outline:'none', border:'none', background:'transparent', color:'#000000ff', fontSize:14, width:'100%' }}
+          />
+        </div>
       </div>
-      <div className="nav-center">
-          <a href="#new-arrivals" className="nav-link">New Arrivals</a>
-          <a href="#collections" className="nav-link">Collections</a>
-          <Link to="/catalogo" className="nav-link">Categories</Link>
-          <a href="#sale" className="nav-link highlight">Sale</a>
+    <div className="nav-center">
+      <button className="nav-link icon-btn" style={{background:'none'}} onClick={()=>scrollOrNavigate('new-arrivals')}>New Arrivals</button>
+      <button className="nav-link icon-btn" style={{background:'none'}} onClick={()=>scrollOrNavigate('collections')}>Collections</button>
+      <Link to="/catalogo" className="nav-link">Categories</Link>
       </div>
       <div className="nav-right">
+        
         {user ? (
           <div className="user-menu" ref={menuRef} style={{ position:'relative' }}>
             <button className="icon-btn" onClick={()=>setOpenMenu(o=>!o)} aria-haspopup="menu" aria-expanded={openMenu}>
@@ -79,6 +142,8 @@ export default function NavBar(){
               <div className="dropdown" role="menu" style={{ position:'absolute', right:0, top:'2.5rem', background:'var(--bg, #fff)', border:'1px solid #ddd', borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,.12)', minWidth:180, zIndex:1000 }}>
                 <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/perfil') }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer' }}>Mi Perfil</button>
                 <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/direcciones') }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer' }}>Mis Direcciones</button>
+                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/reclamos') }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer' }}>Mis Reclamos</button>
+                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/devoluciones') }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer' }}>Mis Devoluciones</button>
                 <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/favoritos') }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer' }}>Mis Favoritos</button>
                 <hr style={{ margin:'6px 0', border:'none', borderTop:'1px solid #eee' }}/>
                 <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); logout() }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer', color:'#b00' }}>Cerrar Sesión</button>

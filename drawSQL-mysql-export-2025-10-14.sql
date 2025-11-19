@@ -224,6 +224,8 @@ CREATE TABLE `Envio`(
     `status` VARCHAR(32) NOT NULL,
     `destinatario` VARCHAR(255) NOT NULL,
     `direccion` VARCHAR(512) NOT NULL,
+    `email_destino` VARCHAR(255) NULL,
+    `telefono_destino` VARCHAR(64) NULL,
     `region_destino` VARCHAR(255) NOT NULL,
     `codigo_tracking` VARCHAR(128) NULL,
     `creado_en` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -267,4 +269,102 @@ ALTER TABLE `ReglaEnvio` ADD CONSTRAINT `regla_envio_empresa_fk` FOREIGN KEY(`id
 ALTER TABLE `Envio` ADD CONSTRAINT `envio_centro_fk` FOREIGN KEY(`id_centro_distribucion`) REFERENCES `CentroDistribucion`(`id`);
 ALTER TABLE `Envio` ADD CONSTRAINT `envio_empresa_fk` FOREIGN KEY(`id_empresa_envio`) REFERENCES `EmpresaEnvio`(`id`);
 ALTER TABLE `EventoEnvio` ADD CONSTRAINT `evento_envio_envio_fk` FOREIGN KEY(`id_envio`) REFERENCES `Envio`(`id`) ON DELETE CASCADE;
+-- Nota: la columna status de orders se agrega más abajo junto con el UPDATE
+
+-- Soporte: Reclamaciones y Devoluciones (Admin)
+CREATE TABLE IF NOT EXISTS `Reclamacion` (
+    `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `order_number` VARCHAR(64) NOT NULL,
+    `email` VARCHAR(255) NOT NULL,
+    `telefono` VARCHAR(64) NULL,
+    `tipo` VARCHAR(16) NOT NULL, -- queja | reclamo
+    `detalle` TEXT NOT NULL,
+    `estado` VARCHAR(32) NOT NULL DEFAULT 'registrado', -- registrado | en_proceso | resuelto | rechazado
+    `respuesta` TEXT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `Devolucion` (
+    `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `order_number` VARCHAR(64) NOT NULL,
+    `email` VARCHAR(255) NOT NULL,
+    `telefono` VARCHAR(64) NULL,
+    `motivo` VARCHAR(64) NOT NULL, -- talla_incorrecta | defectuoso | no_satisfecho | otro
+    `descripcion` TEXT NULL,
+    `metodo` VARCHAR(16) NOT NULL, -- cambio | reembolso
+    `estado` VARCHAR(32) NOT NULL DEFAULT 'solicitado', -- solicitado | aprobado | rechazado | recibido | reembolsado | completado
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `DevolucionItem` (
+    `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `devolucion_id` BIGINT NOT NULL,
+    `product_sku` VARCHAR(64) NULL,
+    `product_name` VARCHAR(255) NULL,
+    `quantity` INT NOT NULL DEFAULT 1,
+    `condicion` VARCHAR(32) NULL, -- nuevo | abierto | defectuoso
+    CONSTRAINT `devolucion_item_fk` FOREIGN KEY (`devolucion_id`) REFERENCES `Devolucion`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Soporte (Cliente/Django): tablas usadas por el backend del cliente
+CREATE TABLE IF NOT EXISTS `complaints` (
+    `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `user_email` VARCHAR(255) NOT NULL,
+    `order_number` VARCHAR(64) NOT NULL,
+    `tipo` VARCHAR(16) NOT NULL, -- queja | reclamo
+    `detalle` TEXT NOT NULL,
+    `estado` VARCHAR(32) NOT NULL DEFAULT 'registrado', -- registrado | en_proceso | resuelto | rechazado
+    `respuesta` TEXT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Índices para complaints (una sola ejecución)
+CREATE INDEX idx_complaints_email ON complaints(user_email);
+CREATE INDEX idx_complaints_order ON complaints(order_number);
+
+CREATE TABLE IF NOT EXISTS `return_requests` (
+    `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `user_email` VARCHAR(255) NOT NULL,
+    `order_number` VARCHAR(64) NOT NULL,
+    `motivo` VARCHAR(64) NOT NULL, -- talla_incorrecta | defectuoso | no_satisfecho | otro
+    `descripcion` TEXT NULL,
+    `metodo` VARCHAR(16) NOT NULL, -- cambio | reembolso
+    `estado` VARCHAR(32) NOT NULL DEFAULT 'solicitado', -- solicitado | aprobado | rechazado | recibido | reembolsado | completado
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Índices para return_requests (una sola ejecución)
+CREATE INDEX idx_returns_email ON return_requests(user_email);
+CREATE INDEX idx_returns_order ON return_requests(order_number);
+
+-- Colecciones (agrupaciones estacionales/ocasiones)
+CREATE TABLE IF NOT EXISTS `Coleccion` (
+    `id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    `nombre` VARCHAR(255) NOT NULL,
+    `slug` VARCHAR(255) NOT NULL UNIQUE,
+    `descripcion` TEXT NULL,
+    `image_url` VARCHAR(1024) NULL,
+    `activo` TINYINT(1) NOT NULL DEFAULT 1,
+    `orden` INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `ColeccionProducto` (
+    `id` BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    `id_coleccion` BIGINT UNSIGNED NOT NULL,
+    `id_producto` BIGINT UNSIGNED NOT NULL,
+    UNIQUE KEY `ux_coleccion_producto` (`id_coleccion`, `id_producto`),
+    CONSTRAINT `coleccion_producto_coleccion_fk` FOREIGN KEY(`id_coleccion`) REFERENCES `Coleccion`(`id`) ON DELETE CASCADE,
+    CONSTRAINT `coleccion_producto_producto_fk` FOREIGN KEY(`id_producto`) REFERENCES `Producto`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 ALTER TABLE orders ADD COLUMN status VARCHAR(32) NULL AFTER created_at;
+
+-- Si tu cliente usa SQL_SAFE_UPDATES, añade una condición con la PK para evitar el Error 1175
+UPDATE orders
+SET status = 'PAGADO'
+WHERE status IS NULL AND id > 0;
+

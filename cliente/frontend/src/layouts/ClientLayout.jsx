@@ -1,5 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import NavBar from '../components/NavBar.jsx'
+import Footer from '../components/Footer.jsx'
+import ChatWidget from '../components/ChatWidget.jsx'
 import '../pages/Home.css'
 
 export default function ClientLayout(){
@@ -7,6 +9,8 @@ export default function ClientLayout(){
     <>
       <NavBar />
       <Outlet />
+      <ChatWidget />
+      <Footer />
     </>
   )
 }

@@ -3,10 +3,10 @@ import { useAuth } from '../auth.jsx'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../toast.jsx'
 import './Home.css'
+import InputFloating from '../components/InputFloating.jsx'
 import regImg from '../../img/img_register2.jpg'
 import loginImg from '../../img/img_login.jpg'
 
-// Reutilizable para login o registro segun prop mode
 export default function Login({ mode = 'login', onBack, onSwitch }) {
   const isLogin = mode === 'login'
   const navigate = useNavigate()
@@ -17,7 +17,7 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
   const { push } = useToast() || { push:()=>{} }
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
   const [verifyStep, setVerifyStep] = useState({ active:false, email:'', code:'' })
-  const [googlePending, setGooglePending] = useState({ active:false, email:'', suggested:'', pending:'', username:'' })
+  const [googlePending, setGooglePending] = useState({ active:false, email:'', suggested:'', pending:'', username:'', password:'', confirm:'' })
   const [googleWorking, setGoogleWorking] = useState(false)
   const [googleError, setGoogleError] = useState('')
 
@@ -78,7 +78,7 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
         setGoogleError(''); setGoogleWorking(true)
         const data = await googleLogin(resp.credential)
         if (data?.pending) {
-          setGooglePending({ active:true, email:data.email, suggested:data.suggested_username, pending:data.pending, username:data.suggested_username })
+          setGooglePending({ active:true, email:data.email, suggested:data.suggested_username, pending:data.pending, username:data.suggested_username, password:'', confirm:'' })
           push('Elige tu nombre de usuario','info')
         } else {
           push('Google login OK','success')
@@ -132,59 +132,83 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {!isLogin && (
             <>
-              <div className={`form-field ${touched.name && errors.name ? 'has-error' : ''}`}>
-                <label htmlFor="name">Nombre completo <span className="req">*</span></label>
-                <div className="input-wrapper icon-left">
-                  <span className="input-icon">👤</span>
-                  <input id="name" name="name" value={form.name} onChange={handleChange} onBlur={handleBlur} placeholder="Nombre completo" aria-invalid={!!(touched.name && errors.name)} />
-                </div>
-                {touched.name && errors.name && <div className="error-msg">{errors.name}</div>}
-              </div>
-              <div className={`form-field ${touched.email && errors.email ? 'has-error' : ''}`}>
-                <label htmlFor="email">Correo electrónico <span className="req">*</span></label>
-                <div className="input-wrapper icon-left">
-                  <span className="input-icon">✅</span>
-                  <input id="email" name="email" type="email" value={form.email} onChange={handleChange} onBlur={handleBlur} placeholder="Correo electrónico" autoComplete="email" aria-invalid={!!(touched.email && errors.email)} />
-                </div>
-                {touched.email && errors.email && <div className="error-msg">{errors.email}</div>}
-              </div>
-              <div className={`form-field ${touched.phone && errors.phone ? 'has-error' : ''}`}>
-                <label htmlFor="phone">Teléfono</label>
-                <div className="input-wrapper icon-left">
-                  <span className="input-icon">📞</span>
-                  <input id="phone" name="phone" value={form.phone} onChange={handleChange} onBlur={handleBlur} placeholder="Teléfono" inputMode="tel" aria-invalid={!!(touched.phone && errors.phone)} />
-                </div>
-                {touched.phone && errors.phone && <div className="error-msg">{errors.phone}</div>}
-              </div>
+              <InputFloating
+                id="name"
+                name="name"
+                label={<><span>Nombre completo</span> <span className="req">*</span></>}
+                value={form.name}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.name ? errors.name : ''}
+                required
+              />
+              <InputFloating
+                id="email"
+                name="email"
+                type="email"
+                label={<><span>Correo electrónico</span> <span className="req">*</span></>}
+                value={form.email}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                autoComplete="email"
+                error={touched.email ? errors.email : ''}
+                required
+              />
+              <InputFloating
+                id="phone"
+                name="phone"
+                label="Teléfono"
+                value={form.phone}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                inputMode="tel"
+                
+                error={touched.phone ? errors.phone : ''}
+              />
             </>
           )}
           {isLogin && (
-            <div className={`form-field ${touched.email && errors.email ? 'has-error' : ''}`}>
-              <label htmlFor="email">Correo electrónico <span className="req">*</span></label>
-              <div className="input-wrapper icon-left">
-                <span className="input-icon">📧</span>
-                <input id="email" name="email" type="email" value={form.email} onChange={handleChange} onBlur={handleBlur} placeholder="ingrese su correo electrónico" autoComplete="email" aria-invalid={!!(touched.email && errors.email)} />
-              </div>
-              {touched.email && errors.email && <div className="error-msg">{errors.email}</div>}
-            </div>
+            <InputFloating
+              id="email"
+              name="email"
+              type="email"
+              label={<><span>Correo electrónico</span> <span className="req">*</span></>}
+              value={form.email}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              autoComplete="email"
+              icon={<span role="img" aria-label="mail"></span>}
+              error={touched.email ? errors.email : ''}
+              required
+            />
           )}
-          <div className={`form-field ${touched.password && errors.password ? 'has-error' : ''}`}>
-            <label htmlFor="password">Contraseña <span className="req">*</span></label>
-            <div className="input-wrapper icon-left">
-              <span className="input-icon">🔒</span>
-              <input id="password" name="password" type="password" value={form.password} onChange={handleChange} onBlur={handleBlur} placeholder="••••••••" autoComplete={isLogin? 'current-password':'new-password'} aria-invalid={!!(touched.password && errors.password)} />
-            </div>
-            {touched.password && errors.password && <div className="error-msg">{errors.password}</div>}
-          </div>
+          <InputFloating
+            id="password"
+            name="password"
+            type="password"
+            label={<><span>Contraseña</span> <span className="req">*</span></>}
+            value={form.password}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            autoComplete={isLogin? 'current-password':'new-password'}
+            icon={<span role="img" aria-label="lock"></span>}
+            error={touched.password ? errors.password : ''}
+            required
+          />
           {!isLogin && (
-            <div className={`form-field ${touched.confirm && errors.confirm ? 'has-error' : ''}`}>
-              <label htmlFor="confirm">Confirmar contraseña <span className="req">*</span></label>
-              <div className="input-wrapper icon-left">
-                <span className="input-icon">✔️</span>
-                <input id="confirm" name="confirm" type="password" value={form.confirm} onChange={handleChange} onBlur={handleBlur} placeholder="Confirmar contraseña" autoComplete="new-password" aria-invalid={!!(touched.confirm && errors.confirm)} />
-              </div>
-              {touched.confirm && errors.confirm && <div className="error-msg">{errors.confirm}</div>}
-            </div>
+            <InputFloating
+              id="confirm"
+              name="confirm"
+              type="password"
+              label={<><span>Confirmar contraseña</span> <span className="req">*</span></>}
+              value={form.confirm}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              autoComplete="new-password"
+              icon={<span role="img" aria-label="check"></span>}
+              error={touched.confirm ? errors.confirm : ''}
+              required
+            />
           )}
           <div className="form-row between small">
             <label className="checkbox-inline">
@@ -205,7 +229,7 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
                 try {
                   const data = await googleLogin('FAKE_GOOGLE_ID_TOKEN')
                   if (data?.pending) {
-                    setGooglePending({ active:true, email:data.email, suggested:data.suggested_username, pending:data.pending, username:data.suggested_username })
+                    setGooglePending({ active:true, email:data.email, suggested:data.suggested_username, pending:data.pending, username:data.suggested_username, password:'', confirm:'' })
                     push('Elige tu nombre de usuario (modo dev)', 'info')
                   } else {
                     push('Google (dev) OK','success'); navigate('/')
@@ -238,7 +262,6 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
                 if (typeof onBack === 'function') {
                   onBack()
                 } else {
-                  // intenta volver, si no hay historial, ir a inicio
                   if (window.history.length > 1) navigate(-1); else navigate('/')
                 }
               }}
@@ -262,12 +285,13 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
         <div className="modal" style={{background:'#fff', padding:'20px', borderRadius:10, maxWidth:420, margin:'10% auto'}}>
           <h3>Verifica tu correo</h3>
           <p>Hemos enviado un código a <strong>{verifyStep.email}</strong>.</p>
-          <input
-            placeholder="Código de 6 dígitos"
+          <InputFloating
+            id="verify-code"
+            name="verify_code"
+            label="Código de 6 dígitos"
             value={verifyStep.code}
             onChange={(e)=>setVerifyStep(v=>({...v, code:e.target.value}))}
             maxLength={6}
-            style={{width:'100%', padding:'10px', border:'1px solid #ddd', borderRadius:6}}
           />
           <div style={{display:'flex', gap:8, marginTop:12}}>
             <button className="primary-btn" onClick={async ()=>{
@@ -289,28 +313,46 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
         <div className="modal" style={{background:'#fff', padding:'20px', borderRadius:10, maxWidth:420, margin:'10% auto'}}>
           <h3>Elige tu nombre de usuario</h3>
           <p>Para <strong>{googlePending.email}</strong></p>
-          <input
-            placeholder="Nombre de usuario"
+          <InputFloating
+            id="google-username"
+            name="google_username"
+            label="Nombre de usuario"
             value={googlePending.username}
             onChange={(e)=>{
               const val = e.target.value
-              // solo permitir letras, numeros, _ . - y limitar largo a 20
               const clean = val.replace(/[^a-zA-Z0-9_\.\-]/g, '').slice(0,20)
               setGooglePending(v=>({...v, username: clean}))
             }}
-            style={{width:'100%', padding:'10px', border:'1px solid #ddd', borderRadius:6}}
+          />
+          <InputFloating
+            id="google-password"
+            name="google_password"
+            type="password"
+            label="Contraseña"
+            value={googlePending.password}
+            onChange={(e)=> setGooglePending(v=>({...v, password: e.target.value}))}
+          />
+          <InputFloating
+            id="google-confirm"
+            name="google_confirm"
+            type="password"
+            label="Confirmar contraseña"
+            value={googlePending.confirm}
+            onChange={(e)=> setGooglePending(v=>({...v, confirm: e.target.value}))}
           />
           <div style={{display:'flex', gap:8, marginTop:12}}>
             <button className="primary-btn" onClick={async ()=>{
               try {
                 if (!/^[a-zA-Z0-9_\.\-]{3,20}$/.test(googlePending.username)) { push('Username inválido (3-20 chars: letras, números, _ . -)','error'); return }
-                await completeGoogleUsername({ username: googlePending.username, pending: googlePending.pending })
+                if (!googlePending.password || googlePending.password.length < 6) { push('Contraseña mínima de 6 caracteres','error'); return }
+                if (googlePending.password !== googlePending.confirm) { push('La confirmación no coincide','error'); return }
+                await completeGoogleUsername({ username: googlePending.username, pending: googlePending.pending, password: googlePending.password })
                 push('Cuenta Google creada','success')
-                setGooglePending({ active:false, email:'', suggested:'', pending:'', username:'' })
+                setGooglePending({ active:false, email:'', suggested:'', pending:'', username:'', password:'', confirm:'' })
                 navigate('/')
               } catch(e){ push(e.message||'No se pudo completar','error') }
             }}>Guardar</button>
-            <button className="link-btn" onClick={()=>setGooglePending({ active:false, email:'', suggested:'', pending:'', username:'' })}>Cancelar</button>
+            <button className="link-btn" onClick={()=>setGooglePending({ active:false, email:'', suggested:'', pending:'', username:'', password:'', confirm:'' })}>Cancelar</button>
           </div>
         </div>
       </div>

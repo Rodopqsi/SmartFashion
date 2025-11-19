@@ -81,3 +81,59 @@ class UserAddress(models.Model):
     class Meta:
         managed = False
         db_table = 'user_address'
+
+
+class Complaint(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    user_email = models.CharField(max_length=255)
+    order_number = models.CharField(max_length=64)
+    tipo = models.CharField(max_length=16)  # queja | reclamo
+    detalle = models.TextField()
+    estado = models.CharField(max_length=32, default='registrado')  # registrado | en_proceso | resuelto | rechazado
+    respuesta = models.TextField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'complaints'
+
+
+class ReturnRequest(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    user_email = models.CharField(max_length=255)
+    order_number = models.CharField(max_length=64)
+    motivo = models.CharField(max_length=64)  # talla_incorrecta | defectuoso | no_satisfecho | otro
+    descripcion = models.TextField(null=True)
+    metodo = models.CharField(max_length=16)  # cambio | reembolso
+    estado = models.CharField(max_length=32, default='solicitado')  # solicitado | aprobado | rechazado | recibido | reembolsado | completado
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'return_requests'
+
+
+# Colecciones (para home): mapean tablas existentes creadas por Admin. No gestionadas por Django.
+class Coleccion(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    nombre = models.CharField(max_length=255)
+    slug = models.CharField(max_length=255)
+    descripcion = models.TextField(null=True)
+    activo = models.BooleanField(default=True)
+    orden = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = False
+    db_table = 'Coleccion'
+
+
+class ColeccionProducto(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    id_coleccion = models.BigIntegerField()
+    id_producto = models.BigIntegerField()
+
+    class Meta:
+        managed = False
+        db_table = 'ColeccionProducto'

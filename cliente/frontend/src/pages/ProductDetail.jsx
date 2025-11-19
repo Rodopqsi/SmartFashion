@@ -5,6 +5,7 @@ import { useAuth } from '../auth.jsx'
 import { useCart } from '../cart.jsx'
 import { useToast } from '../toast.jsx'
 import { useFavorites } from '../favorites.jsx'
+import RatingStars from '../components/RatingStars.jsx'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 
@@ -23,12 +24,23 @@ export default function ProductDetail(){
   const [images, setImages] = useState([])
   const [imagesByColor, setImagesByColor] = useState({})
   const [imagesByVariant, setImagesByVariant] = useState({})
+  const [manualImage, setManualImage] = useState(null)
   const [related, setRelated] = useState([])
   const [reviews, setReviews] = useState([])
   const [loadingReviews, setLoadingReviews] = useState(false)
   const [submittingReview, setSubmittingReview] = useState(false)
   const { isFavorite, toggleFavorite } = useFavorites() || {}
   const [qty, setQty] = useState(1)
+  const [variantWarning, setVariantWarning] = useState('')
+
+  // Average rating derived from real reviews; fallback to product's rating
+  const averageRating = useMemo(()=>{
+    if (Array.isArray(reviews) && reviews.length){
+      const sum = reviews.reduce((acc, r)=> acc + (Number(r.rating)||0), 0)
+      return sum / reviews.length
+    }
+    return Number(product?.rating) || 0
+  }, [reviews, product])
 
   // Load from dedicated endpoint; fall back to /api/home only if needed
   useEffect(()=>{
@@ -78,7 +90,32 @@ export default function ProductDetail(){
     return product?.image_preview ? [product.image_preview] : []
   }, [images, imagesByColor, imagesByVariant, selectedSize, selectedColor, product])
 
-  const activeImage = gallery?.[0]
+  const activeImage = manualImage || ((!selectedSize && !selectedColor && product?.image_preview) ? product.image_preview : gallery?.[0])
+
+  // Build ALL images (base + byColor + byVariant) for the thumbs carousel
+  const allImages = useMemo(()=>{
+    const out = []
+    const seen = new Set()
+    const push = (url)=>{ if (url && !seen.has(url)) { seen.add(url); out.push(url) } }
+    // Base
+    if (Array.isArray(images)) images.forEach(push)
+    if (product?.image_preview) push(product.image_preview)
+    // By color
+    if (imagesByColor && typeof imagesByColor === 'object'){
+      Object.values(imagesByColor).forEach(arr => Array.isArray(arr) && arr.forEach(push))
+    }
+    // By variant
+    if (imagesByVariant && typeof imagesByVariant === 'object'){
+      Object.values(imagesByVariant).forEach(arr => Array.isArray(arr) && arr.forEach(push))
+    }
+    return out
+  }, [images, imagesByColor, imagesByVariant, product])
+
+  // Respect rule: when no size/color selected, revert to original (clear manual override)
+  useEffect(()=>{
+    if (!selectedSize && !selectedColor) setManualImage(null)
+  }, [selectedSize, selectedColor])
+  useEffect(()=>{ setManualImage(null) }, [id])
 
   // Build maps for sizes/colors and available combinations
   const sizeMap = useMemo(()=>{
@@ -134,30 +171,18 @@ export default function ProductDetail(){
               <div style={{width:'100%', height:520, background:'#f4f4f5'}} />
             )}
           </div>
-          {/* Thumbs */}
-          <div style={{display:'flex', gap:8, marginTop:8, flexWrap:'wrap'}}>
-            {gallery.map((img, idx) => (
-              <button key={idx} onClick={()=>{
-                // Swap active gallery's first image to clicked thumb
-                if (selectedSize && selectedColor){
-                  const k = `${selectedSize}-${selectedColor}`
-                  const src = imagesByVariant[k] ? [...imagesByVariant[k]] : []
-                  const sel = src[idx]; src[idx] = src[0]; src[0] = sel
-                  setImagesByVariant(prev => ({ ...prev, [k]: src }))
-                } else if (selectedColor && imagesByColor[String(selectedColor)]){
-                  const key = String(selectedColor)
-                  const src = imagesByColor[key] ? [...imagesByColor[key]] : []
-                  const sel = src[idx]; src[idx] = src[0]; src[0] = sel
-                  setImagesByColor(prev => ({ ...prev, [key]: src }))
-                } else {
-                  const src = [...images]
-                  const sel = src[idx]; src[idx] = src[0]; src[0] = sel
-                  setImages(src)
-                }
-              }} style={{border:'1px solid #eee', borderRadius:8, overflow:'hidden', padding:0, width:80, height:80, background:'#fff'}}>
-                <img src={img} alt={product.nombre+idx} style={{width:'100%', height:'100%', objectFit:'cover'}} />
-              </button>
-            ))}
+          {/* Thumbs: show ALL images with horizontal scroll */}
+          <div style={{display:'flex', gap:8, marginTop:8, flexWrap:'nowrap', overflowX:'auto', paddingBottom:4}}>
+            {allImages.map((img, idx) => {
+              const isActive = img === activeImage
+              return (
+                <button key={idx} onClick={()=>{
+                  setManualImage(prev => prev === img ? null : img)
+                }} style={{border:'2px solid '+(isActive?'#111':'#eee'), borderRadius:8, overflow:'hidden', padding:0, minWidth:80, width:80, height:80, background:'#fff'}}>
+                  <img src={img} alt={product.nombre+idx} style={{width:'100%', height:'100%', objectFit:'cover'}} />
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -165,8 +190,8 @@ export default function ProductDetail(){
         <div>
           <h1 style={{marginTop:0, marginBottom:4}}>{product.nombre}</h1>
           <div style={{display:'flex', alignItems:'center', gap:8, color:'#666', fontSize:14, marginBottom:8}}>
-            <Stars rating={product.rating || 4.6} />
-            <span>({product.reviews_count || 24} reseñas)</span>
+            <RatingStars value={averageRating} readOnly />
+            <span>({Array.isArray(reviews)? reviews.length : (product.reviews_count || 0)} reseñas)</span>
           </div>
           <p style={{color:'#374151'}}>{product.descripcion || 'Descripción no disponible.'}</p>
 
@@ -185,7 +210,11 @@ export default function ProductDetail(){
                 const s = sizeMap.get(String(sid))
                 const disabled = selectedColor && !filteredSizesForColor.includes(String(sid))
                 return (
-                  <button key={sid} onClick={()=>!disabled && setSelectedSize(String(sid))} style={chip(selectedSize===String(sid), disabled)} disabled={disabled}>
+                  <button key={sid} onClick={()=>{
+                    if (disabled) return
+                    // toggle off if already selected
+                    setSelectedSize(prev => (String(prev) === String(sid) ? null : String(sid)))
+                  }} style={chip(selectedSize===String(sid), disabled)} disabled={disabled}>
                     {s?.nombre || sid}
                   </button>
                 )
@@ -206,44 +235,77 @@ export default function ProductDetail(){
                 const c = colorMap.get(String(cid))
                 const disabled = selectedSize && !filteredColorsForSize.includes(String(cid))
                 return (
-                  <button key={cid} onClick={()=>!disabled && setSelectedColor(String(cid))} title={c?.nombre || cid} style={colorDot(selectedColor===String(cid), disabled)} disabled={disabled}>
+                  <button key={cid} onClick={()=>{
+                    if (disabled) return
+                    setSelectedColor(prev => (String(prev) === String(cid) ? null : String(cid)))
+                  }} title={c?.nombre || cid} style={colorDot(selectedColor===String(cid), disabled)} disabled={disabled}>
                     <span style={{display:'inline-block', width:18, height:18, borderRadius:'50%', background: c?.codigo_hex || '#000'}} />
                   </button>
                 )
               })}
             </div>
+            {(selectedSize || selectedColor) && (
+              <div style={{marginTop:8}}>
+                <button onClick={()=>{ setSelectedSize(null); setSelectedColor(null) }} style={clearMiniBtn}>Quitar selección</button>
+              </div>
+            )}
           </div>
 
           {/* Qty + Add */}
-          <div style={{display:'flex', alignItems:'center', gap:8, marginTop:18}}>
+          <div style={{display:'flex', alignItems:'center', gap:8, marginTop:18, flexWrap:'wrap'}}>
             <button style={qtyBtn} onClick={()=> setQty(q=> Math.max(1, q-1))}>-</button>
             <input readOnly value={qty} style={qtyInput}/>
             <button style={qtyBtn} onClick={()=> setQty(q=> Math.min(99, q+1))}>+</button>
-            <button
-              onClick={()=>{
-                if (selectedStock===null){ toast?.push('Selecciona talla y color', 'info'); return }
-                if (selectedStock===0){ toast?.push('Sin stock para esta combinación', 'error'); return }
-                cart?.addItem(product, { size: { id: selectedSize, nombre: sizeMap.get(String(selectedSize))?.nombre }, color: { id: selectedColor, nombre: colorMap.get(String(selectedColor))?.nombre, codigo_hex: colorMap.get(String(selectedColor))?.codigo_hex }, qty })
-                toast?.push('Producto agregado al carrito', 'success')
-              }}
-              style={{...ctaBtn, opacity: (selectedStock===0 || selectedStock===null)? .6: 1, cursor: (selectedStock===0 || selectedStock===null)? 'not-allowed':'pointer'}}
-              disabled={selectedStock===0 || selectedStock===null}
-            >Agregar al carrito</button>
+            {selectedStock === 0 ? (
+              <button style={{...ctaBtn, background:'#9ca3af', cursor:'not-allowed'}} disabled>Producto agotado</button>
+            ) : (
+              <>
+                {variantWarning && (
+                  <div style={{color:'#b91c1c', background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:8, padding:'8px 10px', marginBottom:8, fontSize:13, textAlign:'center'}}>
+                    {variantWarning}
+                  </div>
+                )}
+                <button
+                  onClick={()=>{
+                    if (selectedStock===null){
+                      if (!selectedSize && !selectedColor) setVariantWarning('Por favor selecciona talla y color');
+                      else if (!selectedSize) setVariantWarning('Por favor selecciona una talla');
+                      else if (!selectedColor) setVariantWarning('Por favor selecciona un color');
+                      else setVariantWarning('Selecciona talla y color');
+                      return;
+                    }
+                    setVariantWarning('');
+                    if (selectedStock===0){ toast?.push('Sin stock para esta combinación', 'error'); return }
+                    cart?.addItem(product, { size: { id: selectedSize, nombre: sizeMap.get(String(selectedSize))?.nombre }, color: { id: selectedColor, nombre: colorMap.get(String(selectedColor))?.nombre, codigo_hex: colorMap.get(String(selectedColor))?.codigo_hex }, qty })
+                    toast?.push('Producto agregado al carrito', 'success')
+                  }}
+                  style={{...ctaBtn, opacity: (selectedStock===null)? .6: 1, cursor: (selectedStock===null)? 'not-allowed':'pointer'}}
+                >Agregar al carrito</button>
+              </>
+            )}
             <button style={iconBtn} title={isFavorite?.(product.id)? 'Quitar de favoritos':'Añadir a favoritos'} onClick={()=> toggleFavorite && toggleFavorite(product)}>
               {isFavorite?.(product.id)? '❤️':'🤍'}
             </button>
+
+            {/* Stock badge */}
+            {selectedStock !== null && (
+              <span style={stockBadge(selectedStock)}>
+                <span style={{display:'inline-block', width:8, height:8, borderRadius:'50%', background: selectedStock>0? '#16a34a':'#b91c1c', marginRight:6}}></span>
+                {selectedStock>0? `Quedan ${selectedStock}` : 'Agotado'}
+              </span>
+            )}
           </div>
-          {selectedStock !== null && (
-            <div style={{marginTop:8, fontSize:12, color: selectedStock>0? '#16a34a':'#b91c1c'}}>
-              {selectedStock>0? `${selectedStock} en stock` : 'Sin stock para esta combinación'} —
-              <span style={{marginLeft:6}}>Talla: <b>{sizeMap.get(String(selectedSize))?.nombre || selectedSize}</b></span>
-              <span style={{marginLeft:10}}>Color: <b>{colorMap.get(String(selectedColor))?.nombre || selectedColor}</b></span>
+          {/* Variant summary */}
+          {(selectedSize || selectedColor) && (
+            <div style={{marginTop:8, fontSize:12, color:'#374151'}}>
+              {selectedSize && (<span>Talla: <b>{sizeMap.get(String(selectedSize))?.nombre || selectedSize}</b></span>)}
+              {selectedColor && (<span style={{marginLeft:10}}>Color: <b>{colorMap.get(String(selectedColor))?.nombre || selectedColor}</b></span>)}
             </div>
           )}
         </div>
       </section>
 
-      {/* Reviews carousel */}
+      {/* Reviews */}
       <section style={{marginTop:28}}>
         <h3 style={{margin:'12px 0'}}>Reseñas</h3>
         <ReviewsSection productId={product.id} reviews={reviews} loading={loadingReviews} onSubmit={async (payload)=>{
@@ -264,75 +326,75 @@ export default function ProductDetail(){
         }} submitting={submittingReview} />
       </section>
 
-      {/* Related */}
+      {/* Related carousel */}
       <section style={{marginTop:28}}>
         <h3 style={{margin:'12px 0'}}>Productos relacionados</h3>
-        <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:12}}>
-          {related.map(r => (
-            <Link key={r.id} to={`/producto/${r.id}`} state={{product:r}} style={{textDecoration:'none', color:'inherit'}}>
-              <article style={{border:'1px solid #eee', borderRadius:10, overflow:'hidden', background:'#fff'}}>
-                {r.image_preview ? <img src={r.image_preview} alt={r.nombre} style={{width:'100%', height:160, objectFit:'cover'}} /> : <div style={{height:160, background:'#f5f5f5'}}/>}
-                <div style={{padding:10}}>
-                  <div style={{fontWeight:700}}>{r.nombre}</div>
-                  <div style={{fontWeight:800}}>S/ {Number(r.precio).toFixed(2)}</div>
-                </div>
-              </article>
-            </Link>
-          ))}
-          {!related.length && <div style={{color:'#666'}}>No hay relacionados.</div>}
-        </div>
+        {related?.length ? (
+          <Carousel>
+            {related.map(r => (
+              <Link key={r.id} to={`/producto/${r.id}`} state={{product:r}} style={{textDecoration:'none', color:'inherit', display:'block', minWidth:220}}>
+                <article style={{border:'1px solid #eee', borderRadius:10, overflow:'hidden', background:'#fff'}}>
+                  {r.image_preview ? <img src={r.image_preview} alt={r.nombre} style={{width:'100%', height:160, objectFit:'cover'}} /> : <div style={{height:160, background:'#f5f5f5'}}/>}
+                  <div style={{padding:10}}>
+                    <div style={{fontWeight:700}}>{r.nombre}</div>
+                    <div style={{fontWeight:800}}>S/ {Number(r.precio).toFixed(2)}</div>
+                  </div>
+                </article>
+              </Link>
+            ))}
+          </Carousel>
+        ) : (
+          <div style={{color:'#666'}}>No hay relacionados.</div>
+        )}
       </section>
     </div>
   )
 }
 
-function Stars({rating=4.5}){
-  const full = Math.floor(rating)
-  const half = rating - full >= 0.5
-  const arr = new Array(5).fill(0).map((_,i)=> i < full ? '★' : i===full && half ? '☆' : '☆')
-  return <div style={{color:'#f59e0b', fontSize:18, letterSpacing:1}}>{arr.join(' ')}</div>
-}
+// Old Stars component removed; RatingStars readOnly is used instead
 
 function ReviewsSection({ productId, reviews = [], loading, onSubmit, submitting }){
-  const [page, setPage] = useState(0)
-  const per = 2
-  const max = Math.max(1, Math.ceil((reviews?.length || 0) / per))
-  const slice = reviews.slice(page*per, page*per + per)
-
+  const [expanded, setExpanded] = useState({})
   const [rating, setRating] = useState(5)
   const [text, setText] = useState('')
   const { user } = useAuth() || {}
+
   return (
-    <div style={{position:'relative', border:'1px solid #eee', borderRadius:12, padding:'12px 44px'}}>
-      <button onClick={()=>setPage(p=> Math.max(0, p-1))} style={carouselArrow} aria-label="Anterior">‹</button>
-      <button onClick={()=>setPage(p=> Math.min(max-1, p+1))} style={{...carouselArrow, right:8, left:'auto'}} aria-label="Siguiente">›</button>
+    <div style={{ border:'1px solid #eee', borderRadius:12, padding:12 }}>
       {loading ? (
         <div style={{padding:12}}>Cargando reseñas...</div>
       ) : (
-        <>
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
-            {slice.map(r => (
-              <div key={r.id} style={{background:'#fff', border:'1px solid #eee', borderRadius:10, padding:12}}>
-                <div style={{fontWeight:600, marginBottom:6}}>{r.user}</div>
-                <div style={{color:'#f59e0b', marginBottom:4}}>{'★'.repeat(r.rating||0)}</div>
-                <div style={{color:'#374151'}}>{r.text}</div>
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          {reviews.map(r => {
+            const isOpen = !!expanded[r.id]
+            const textShort = (r.text || '').slice(0, 160)
+            const needMore = (r.text || '').length > 160
+            return (
+              <div key={r.id} style={{ background:'#fff', border:'1px solid #eee', borderRadius:10, padding:12 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div style={{ fontWeight:600 }}>{r.user}</div>
+                  <RatingStars value={r.rating || 0} readOnly />
+                </div>
+                <div style={{ color:'#374151', marginTop:6 }}>
+                  {isOpen ? (r.text || '') : textShort}
+                  {needMore && !isOpen && '...'}
+                </div>
+                {needMore && (
+                  <button onClick={()=> setExpanded(prev => ({ ...prev, [r.id]: !isOpen }))} style={clearMiniBtn}>
+                    {isOpen ? 'Ver menos' : 'Ver más'}
+                  </button>
+                )}
               </div>
-            ))}
-            {!slice.length && <div style={{color:'#666'}}>Sé el primero en opinar.</div>}
-          </div>
-          <div style={{textAlign:'center', marginTop:8, fontSize:12, color:'#666'}}>Página {page+1} de {max}</div>
-        </>
+            )
+          })}
+          {!reviews.length && <div style={{color:'#666'}}>Sé el primero en opinar.</div>}
+        </div>
       )}
 
       {user && (
         <div style={{marginTop:16, borderTop:'1px solid #eee', paddingTop:12}}>
           <div style={{fontWeight:600, marginBottom:6}}>Escribe una reseña</div>
-          <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:8}}>
-            <label>Calificación:</label>
-            <select value={rating} onChange={e=>setRating(Number(e.target.value))}>
-              {[5,4,3,2,1].map(v=> <option key={v} value={v}>{v} ★</option>)}
-            </select>
-          </div>
+          <RatingStars value={rating} onChange={setRating} name={`rate-${productId}`} />
           <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Tu opinión" rows={3} style={{width:'100%', border:'1px solid #ddd', borderRadius:8, padding:8}} />
           <div style={{marginTop:8}}>
             <button disabled={submitting || !text.trim()} onClick={()=> onSubmit && onSubmit({ rating, text })} style={{...ctaBtn, opacity: submitting? .6: 1}}>
@@ -345,6 +407,19 @@ function ReviewsSection({ productId, reviews = [], loading, onSubmit, submitting
   )
 }
 
+function Carousel({ children }){
+  const [ref, setRef] = useState(null)
+  return (
+    <div style={{ position:'relative' }}>
+      <div ref={setRef} style={{ display:'flex', gap:12, overflowX:'auto', scrollBehavior:'smooth', padding:'4px 0' }}>
+        {children}
+      </div>
+      <button onClick={()=> ref && ref.scrollBy({ left: -300, behavior: 'smooth' })} style={carouselArrow} aria-label="Anterior">‹</button>
+      <button onClick={()=> ref && ref.scrollBy({ left: 300, behavior: 'smooth' })} style={{...carouselArrow, right:8, left:'auto'}} aria-label="Siguiente">›</button>
+    </div>
+  )
+}
+
 // styles
 const chip = (active, disabled)=>({border:'1px solid '+(active?'#111':'#d1d5db'), background:active?'#111':'#fff', color:active?'#fff':'#111', padding:'6px 10px', borderRadius:10, cursor: disabled? 'not-allowed':'pointer', opacity: disabled? .5: 1})
 const colorDot = (active, disabled)=>({border:'1px solid '+(active?'#111':'#e5e7eb'), background:'#fff', borderRadius:10, padding:6, cursor: disabled? 'not-allowed':'pointer', opacity: disabled? .5: 1})
@@ -353,3 +428,10 @@ const qtyInput = {width:44, textAlign:'center', border:'1px solid #e5e7eb', heig
 const ctaBtn = {padding:'10px 16px', border:'none', background:'#111', color:'#fff', borderRadius:10, fontWeight:700, cursor:'pointer'}
 const iconBtn = {padding:'8px 10px', border:'1px solid #eee', background:'#fff', borderRadius:10, cursor:'pointer'}
 const carouselArrow = {position:'absolute', left:8, top:'50%', transform:'translateY(-50%)', width:32, height:32, borderRadius:'50%', border:'1px solid #e5e7eb', background:'#fff'}
+const clearMiniBtn = { border:'none', background:'transparent', color:'#2563eb', cursor:'pointer', fontSize:13, padding:0, marginTop:6 }
+const stockBadge = (stock)=>({
+  display:'inline-flex', alignItems:'center', gap:6,
+  background:'#f1f5f9', color:'#0f172a',
+  borderRadius:9999, padding:'6px 10px', fontSize:12,
+  border:'1px solid ' + (stock>0 ? '#16a34a33' : '#b91c1c33')
+})

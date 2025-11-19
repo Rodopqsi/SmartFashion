@@ -1,9 +1,12 @@
 import { useEffect, useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import InputFloating from '../components/InputFloating.jsx'
+import InputSelectFloating from '../components/InputSelectFloating.jsx'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 
 export default function Catalogo() {
+  const location = useLocation()
   const [data, setData] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [query, setQuery] = useState('')
@@ -13,35 +16,47 @@ export default function Catalogo() {
   const [selectedColor, setSelectedColor] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [typing, setTyping] = useState(false)
+  // typing indicator removed to avoid icon next to search
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(12)
   const debounceRef = useRef(null)
 
-  const fetchData = (cat, qVal, size, color, { showSpinner=true } = {}) => {
+  const fetchData = (cat, qVal, size, color, pageVal, limitVal, { showSpinner=true } = {}) => {
     if (showSpinner) setLoading(true)
     const params = new URLSearchParams()
     if (cat) params.append('category_id', cat)
     if (qVal) params.append('q', qVal)
     if (size) params.append('size', size)
     if (color) params.append('color', color)
+    if (pageVal) params.append('page', pageVal)
+    if (limitVal) params.append('limit', limitVal)
     fetch(`${API_BASE}/api/home/${params.toString() ? `?${params.toString()}` : ''}`)
       .then(res => res.json())
       .then(json => { setData(json.data); setLoading(false) })
       .catch(err => { console.error(err); setError('No se pudo cargar el catálogo'); setLoading(false) })
   }
 
-  useEffect(() => { fetchData(selectedCategory, query, selectedSize, selectedColor) }, [selectedCategory, selectedSize, selectedColor])
+  useEffect(() => { fetchData(selectedCategory, query, selectedSize, selectedColor, page, limit) }, [selectedCategory, selectedSize, selectedColor, page, limit])
 
   useEffect(() => {
-    setTyping(true)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      fetchData(selectedCategory, query, selectedSize, selectedColor, { showSpinner:false })
-      setTyping(false)
+      setPage(1)
+      fetchData(selectedCategory, query, selectedSize, selectedColor, 1, limit, { showSpinner:false })
     }, 350)
     return () => clearTimeout(debounceRef.current)
   }, [query])
 
+  // Accept query from URL (?q=...)
   useEffect(() => {
+    const qParam = new URLSearchParams(location.search).get('q') || ''
+    setQuery(qParam)
+    setPage(1)
+  }, [location.search])
+
+  useEffect(() => {
+    // reset page when filters change
+    setPage(1)
     fetch(`${API_BASE}/api/sizes/`).then(r=>r.json()).then(j=>setSizes(j.data||[])).catch(()=>{})
     fetch(`${API_BASE}/api/colors/`).then(r=>r.json()).then(j=>setColors(j.data||[])).catch(()=>{})
   }, [])
@@ -49,34 +64,29 @@ export default function Catalogo() {
   if (loading && !data) return <div style={{padding:20}}>Cargando...</div>
   if (error) return <div style={{padding:20,color:'red'}}>{error}</div>
 
-  const { categories = [], featured_products = [] } = data || {}
+  const { categories = [], featured_products = [], pagination = { page:1, limit:limit, total:0 } } = data || {}
+  const totalPages = Math.max(1, Math.ceil((pagination.total || 0) / (pagination.limit || limit || 12)))
+  const startIdx = pagination.total ? ((pagination.page || page) - 1) * (pagination.limit || limit) + 1 : 0
+  const endIdx = pagination.total ? Math.min(pagination.total, startIdx + (featured_products?.length || 0) - 1) : 0
 
   return (
     <div style={{fontFamily:'Inter, system-ui, Arial', padding:20}}>
       <header style={{display:'flex', flexWrap:'wrap', gap:16, justifyContent:'center', alignItems:'center'}}>
         <h1 style={{margin:0}}>Catálogo</h1>
-        <div style={{display:'flex', gap:8, flexWrap:'wrap', alignItems:'center', justifySelf:'end' }}>
-          <div style={{position:'relative', display:'flex', justifyContent:'center', alignItems:'center' }}>
-            <input
-              placeholder="Buscar productos..."
-              value={query}
-              onChange={e=>setQuery(e.target.value)}
-              style={searchInputStyle}
-            />
-            {(typing) && (
-              <span style={spinnerStyle} title="Buscando">⌛</span>
-            )}
+        <div style={{display:'grid', gridTemplateColumns:'minmax(220px, 1fr) 180px 180px auto', gap:8, alignItems:'center', justifySelf:'end', width:'100%', maxWidth:780}}>
+          <div style={{position:'relative'}}>
+            <InputFloating label="Buscar productos..." value={query} onChange={e=>setQuery(e.target.value)} />
           </div>
-          <select value={selectedSize} onChange={e=>setSelectedSize(e.target.value)} style={selectStyle}>
+          <InputSelectFloating label="Talla" value={selectedSize} onChange={e=>setSelectedSize(e.target.value)}>
             <option value="">Talla</option>
             {sizes.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-          </select>
-          <select value={selectedColor} onChange={e=>setSelectedColor(e.target.value)} style={selectStyle}>
+          </InputSelectFloating>
+          <InputSelectFloating label="Color" value={selectedColor} onChange={e=>setSelectedColor(e.target.value)}>
             <option value="">Color</option>
             {colors.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
+          </InputSelectFloating>
           {(query || selectedSize || selectedColor || selectedCategory!==null) && (
-            <button onClick={()=>{setQuery('');setSelectedSize('');setSelectedColor('');setSelectedCategory(null)}} style={clearBtnStyle}>Limpiar</button>
+            <button onClick={()=>{setQuery('');setSelectedSize('');setSelectedColor('');setSelectedCategory(null); setPage(1)}} style={clearBtnStyle}>Limpiar</button>
           )}
         </div>
       </header>
@@ -97,9 +107,13 @@ export default function Catalogo() {
           ))}
         </div>
       </section>
-
       <section style={{marginTop:24}}>
-        <h2>Productos</h2>
+        <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
+          <h2 style={{margin:0}}>Productos</h2>
+          <small style={{color:'#666'}}>
+            {pagination.total ? `Mostrando ${startIdx}-${endIdx} de ${pagination.total}` : ''}
+          </small>
+        </div>
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:16}}>
           {featured_products.map(p => (
             <Link key={p.id} to={`/producto/${p.id}`} state={{ product: p }} style={{ textDecoration:'none', color:'inherit' }}>
@@ -127,6 +141,20 @@ export default function Catalogo() {
             </Link>
           ))}
         </div>
+        {/* Pagination controls */}
+        <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:12, marginTop:16}}>
+          <button
+            disabled={page <= 1}
+            onClick={()=> setPage(p => Math.max(1, p-1))}
+            style={{...buttonStyle(false), opacity: page<=1? .5:1, cursor: page<=1? 'not-allowed':'pointer'}}
+          >Anterior</button>
+          <span style={{fontSize:13, color:'#555'}}>Página {pagination.page || page} de {totalPages}</span>
+          <button
+            disabled={page >= totalPages}
+            onClick={()=> setPage(p => Math.min(totalPages, p+1))}
+            style={{...buttonStyle(false), opacity: page>=totalPages? .5:1, cursor: page>=totalPages? 'not-allowed':'pointer'}}
+          >Siguiente</button>
+        </div>
       </section>
     </div>
   )
@@ -146,19 +174,8 @@ function buttonStyle(active){
   }
 }
 
-const searchInputStyle = {
-  padding: '6px 10px',
-  border: '1px solid #ccc',
-  borderRadius: 6,
-  minWidth: 240
-}
-
-const selectStyle = {
-  padding: '6px 10px',
-  border: '1px solid #ccc',
-  borderRadius: 6,
-  background: '#fff'
-}
+const searchInputStyle = {}
+const selectStyle = {}
 
 const clearBtnStyle = {
   ...buttonStyle(false),
@@ -166,11 +183,4 @@ const clearBtnStyle = {
   color: '#b91c1c'
 }
 
-const spinnerStyle = {
-  position: 'absolute',
-  right: 8,
-  top: '50%',
-  transform: 'translateY(-50%)',
-  fontSize: 12,
-  opacity: 0.7
-}
+// spinner removed

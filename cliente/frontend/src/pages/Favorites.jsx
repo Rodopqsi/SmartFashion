@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from 'react'
+import InputFloating from '../components/InputFloating.jsx'
+import InputSelectFloating from '../components/InputSelectFloating.jsx'
 import { useAuth } from '../auth.jsx'
 import { useFavorites } from '../favorites.jsx'
 import { Link } from 'react-router-dom'
@@ -37,14 +39,14 @@ export default function Favorites(){
         )}
       </div>
 
-      <div style={{display:'flex', gap:12, margin:'12px 0'}}>
-        <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar en favoritos" style={{flex:1, minWidth:240, padding:'10px 12px', border:'1px solid #ddd', borderRadius:10}} />
-        <select value={priceRange} onChange={e=>setPriceRange(e.target.value)} style={{padding:'10px 12px', border:'1px solid #ddd', borderRadius:10}}>
+      <div style={{display:'grid', gridTemplateColumns:'1fr 260px', gap:12, margin:'12px 0'}}>
+        <InputFloating label="Buscar en favoritos" value={query} onChange={e=>setQuery(e.target.value)} />
+        <InputSelectFloating label="Precio" value={priceRange} onChange={e=>setPriceRange(e.target.value)}>
           <option value="all">Todos los precios</option>
           <option value="0-100">S/ 0 - S/ 100</option>
           <option value="100-200">S/ 100 - S/ 200</option>
           <option value="200+">S/ 200+</option>
-        </select>
+        </InputSelectFloating>
       </div>
 
       {!items?.length && (

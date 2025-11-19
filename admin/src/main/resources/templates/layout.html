@@ -26,6 +26,7 @@
             <a th:href="@{/admin/colors}">Colores</a>
             <a th:href="@{/admin/sizes}">Tallas</a>
             <a th:href="@{/admin/promotions}">Promociones</a>
+            <a th:href="@{/admin/collections}">Colecciones</a>
           </div>
         </div>
         <div class="menu-group">
@@ -41,8 +42,17 @@
             <a th:href="@{/admin/shipping/rules}">Reglas</a>
           </div>
         </div>
+        <div class="menu-group">
+          <button class="menu-group-toggle" type="button" aria-expanded="false">
+            Soporte
+            <span class="caret" aria-hidden="true">▸</span>
+          </button>
+          <div class="submenu" hidden>
+            <a th:href="@{/admin/support/claims}">Reclamaciones</a>
+            <a th:href="@{/admin/support/returns}">Devoluciones</a>
+          </div>
+        </div>
         <a th:href="@{/admin/users}">Usuarios</a>
-        <!-- Logout via POST to include CSRF, avoids 405/500 when clicking as a link -->
         <form id="logoutForm" th:action="@{/logout}" method="post" style="display:none">
           <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
         </form>
@@ -66,7 +76,6 @@
       var closeBtn = document.getElementById('sidebarClose');
       function open(){ document.body.classList.add('sidebar-open'); }
       function close(){ document.body.classList.remove('sidebar-open'); }
-      // Collapsible "Productos" group (event delegation, robust across browsers)
       function collapseSubmenus(){
         var submenus = sidebar ? sidebar.querySelectorAll('.submenu') : [];
         var carets = sidebar ? sidebar.querySelectorAll('.menu-group-toggle .caret') : [];
@@ -80,7 +89,6 @@
         if(document.body.classList.contains('sidebar-open')) { collapseSubmenus(); close(); } else { open(); }
       });
       if(closeBtn) closeBtn.addEventListener('click', function(){ collapseSubmenus(); close(); });
-      // close sidebar on navigation (small UX touch)
       sidebar && sidebar.addEventListener('click', function(e){ if(e.target.tagName==='A') { collapseSubmenus(); close(); } });
 
       if(sidebar){
@@ -98,8 +106,6 @@
           }
         });
       }
-
-      // (No function re-assignment) we invoke collapseSubmenus() directly when closing above
     })();
   </script>
 </body>

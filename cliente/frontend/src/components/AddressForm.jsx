@@ -1,4 +1,6 @@
 import React from 'react'
+import InputFloating from './InputFloating.jsx'
+import InputSelectFloating from './InputSelectFloating.jsx'
 import { useAuth } from '../auth.jsx'
 import { UBIGEO, REGIONES } from './peruUbigeo.js'
 
@@ -55,62 +57,59 @@ export default function AddressForm({ initial = {}, onSaved, onCancel }){
 
   return (
     <form onSubmit={submit} style={{display:'grid', gap:8}}>
-      <div style={row}><label>Etiqueta</label><input name="label" value={form.label||''} onChange={handleChange} /></div>
+      <div style={row}><label>Etiqueta</label><InputFloating name="label" label="Etiqueta" value={form.label||''} onChange={handleChange} /></div>
       <div style={row}><label>Destinatario*</label>
         <div>
-          <input name="nombre" value={form.nombre||''} onChange={handleChange} required />
-          {errors.nombre && <small style={errStyle}>{errors.nombre}</small>}
+          <InputFloating name="nombre" label="Nombre del destinatario" value={form.nombre||''} onChange={handleChange} required error={errors.nombre} />
         </div>
       </div>
-      <div style={row}><label>Teléfono</label><input name="telefono" value={form.telefono||''} onChange={handleChange} /></div>
-      <div style={row}><label>Teléfono alterno</label><input name="alt_telefono" value={form.alt_telefono||''} onChange={handleChange} /></div>
+      <div style={row}><label>Teléfono</label><InputFloating name="telefono" label="Teléfono" value={form.telefono||''} onChange={handleChange} /></div>
+      <div style={row}><label>Teléfono alterno</label><InputFloating name="alt_telefono" label="Teléfono alterno" value={form.alt_telefono||''} onChange={handleChange} /></div>
       <div style={row}><label>Dirección*</label>
         <div>
-          <input name="direccion" value={form.direccion||''} onChange={handleChange} required />
-          {errors.direccion && <small style={errStyle}>{errors.direccion}</small>}
+          <InputFloating name="direccion" label="Dirección" value={form.direccion||''} onChange={handleChange} required error={errors.direccion} />
         </div>
       </div>
-      <div style={row}><label>Dirección línea 2</label><input name="direccion_linea2" value={form.direccion_linea2||''} onChange={handleChange} /></div>
+      <div style={row}><label>Dirección línea 2</label><InputFloating name="direccion_linea2" label="Dirección línea 2" value={form.direccion_linea2||''} onChange={handleChange} /></div>
       <div style={row}><label>Región (Departamento)*</label>
         <div>
-          <select name="region" value={form.region||''} onChange={(e)=>{ handleChange(e); setForm(p=>({ ...p, ciudad:'', distrito:'' })) }} required>
+          <InputSelectFloating name="region" label="Seleccione" value={form.region||''} onChange={(e)=>{ handleChange(e); setForm(p=>({ ...p, ciudad:'', distrito:'' })) }} required>
             <option value="">Seleccione</option>
             {REGIONES.map(r => <option key={r} value={r}>{r}</option>)}
             <option value="Otro">Otro</option>
-          </select>
-          {errors.region && <small style={errStyle}>{errors.region}</small>}
+          </InputSelectFloating>
         </div>
       </div>
       {form.region && form.region !== 'Otro' && UBIGEO[form.region] ? (
         <>
           <div style={row}><label>Provincia*</label>
             <div>
-              <select name="ciudad" value={form.ciudad||''} onChange={(e)=>{ handleChange(e); setForm(p=>({ ...p, distrito:'' })) }} required>
+              <InputSelectFloating name="ciudad" label="Seleccione" value={form.ciudad||''} onChange={(e)=>{ handleChange(e); setForm(p=>({ ...p, distrito:'' })) }} required>
                 <option value="">Seleccione</option>
                 {Object.keys(UBIGEO[form.region]).map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
+              </InputSelectFloating>
               {errors.ciudad && <small style={errStyle}>{errors.ciudad}</small>}
             </div>
           </div>
           <div style={row}><label>Distrito*</label>
             <div>
-              <select name="distrito" value={form.distrito||''} onChange={handleChange} required>
+              <InputSelectFloating name="distrito" label="Seleccione" value={form.distrito||''} onChange={handleChange} required>
                 <option value="">Seleccione</option>
                 {(UBIGEO[form.region][form.ciudad] || []).map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
+              </InputSelectFloating>
               {errors.distrito && <small style={errStyle}>{errors.distrito}</small>}
             </div>
           </div>
         </>
       ) : (
         <>
-          <div style={row}><label>Provincia</label><input name="ciudad" value={form.ciudad||''} onChange={handleChange} /></div>
-          <div style={row}><label>Distrito</label><input name="distrito" value={form.distrito||''} onChange={handleChange} /></div>
+          <div style={row}><label>Provincia</label><InputFloating name="ciudad" label="Provincia" value={form.ciudad||''} onChange={handleChange} /></div>
+          <div style={row}><label>Distrito</label><InputFloating name="distrito" label="Distrito" value={form.distrito||''} onChange={handleChange} /></div>
         </>
       )}
-      <div style={row}><label>Estado/Provincia</label><input name="estado" value={form.estado||''} onChange={handleChange} /></div>
-      <div style={row}><label>Código Postal</label><input name="codigo_postal" value={form.codigo_postal||''} onChange={handleChange} /></div>
-      <div style={row}><label>Referencia</label><input name="referencia" value={form.referencia||''} onChange={handleChange} /></div>
+      <div style={row}><label>Estado/Provincia</label><InputFloating name="estado" label="Estado/Provincia" value={form.estado||''} onChange={handleChange} /></div>
+      <div style={row}><label>Código Postal</label><InputFloating name="codigo_postal" label="Código Postal" value={form.codigo_postal||''} onChange={handleChange} /></div>
+      <div style={row}><label>Referencia</label><InputFloating name="referencia" label="Referencia" value={form.referencia||''} onChange={handleChange} /></div>
       <div style={{display:'flex', alignItems:'center', gap:8}}>
         <input type="checkbox" id="is_default" name="is_default" checked={!!form.is_default} onChange={handleChange} />
         <label htmlFor="is_default">Usar como dirección predeterminada</label>

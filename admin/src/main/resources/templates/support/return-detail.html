@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="layout :: layout('Detalle Devolución', ~{::section})">
+<section>
+  <div class="card" th:if="${ret != null}">
+    <h2>Devolución #<span th:text="${ret.id}"></span></h2>
+    <p><strong>Orden:</strong> <span th:text="${ret.orderNumber}"></span></p>
+    <p><strong>Email:</strong> <span th:text="${ret.email}"></span></p>
+    <p><strong>Teléfono:</strong> <span th:text="${ret.telefono}"></span></p>
+    <p><strong>Motivo:</strong> <span th:text="${ret.motivo}"></span></p>
+    <p><strong>Método:</strong> <span th:text="${ret.metodo}"></span></p>
+    <p><strong>Descripción:</strong></p>
+    <pre th:text="${ret.descripcion}" style="white-space:pre-wrap"></pre>
+
+    <form method="post" style="margin-top:1rem">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+      <div class="row">
+        <label>Estado</label>
+        <select name="estado" th:value="${ret.estado}">
+          <option value="solicitado" th:selected="${ret.estado == 'solicitado'}">Solicitado</option>
+          <option value="aprobado" th:selected="${ret.estado == 'aprobado'}">Aprobado</option>
+          <option value="rechazado" th:selected="${ret.estado == 'rechazado'}">Rechazado</option>
+          <option value="recibido" th:selected="${ret.estado == 'recibido'}">Recibido</option>
+          <option value="reembolsado" th:selected="${ret.estado == 'reembolsado'}">Reembolsado</option>
+          <option value="completado" th:selected="${ret.estado == 'completado'}">Completado</option>
+        </select>
+      </div>
+      <button class="btn" type="submit">Guardar</button>
+      <a class="btn secondary" th:href="@{/admin/support/returns}">Volver</a>
+    </form>
+  </div>
+  <div class="card" th:if="${ret == null}">No encontrado</div>
+  </section>
+</html>

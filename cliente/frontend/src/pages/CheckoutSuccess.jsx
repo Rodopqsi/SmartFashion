@@ -1,9 +1,16 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useCart } from '../cart.jsx'
 
 export default function CheckoutSuccess(){
   const { search } = useLocation()
   const order = new URLSearchParams(search).get('order') || 'N/A'
+  const { clear } = useCart() || {}
+
+  useEffect(() => {
+    clear && clear()
+  }, [clear])
+
   return (
     <div style={{maxWidth:800, margin:'0 auto', padding:'16px 20px', paddingTop:'calc(var(--nav-height) + 12px)', textAlign:'center'}}>
       <h2>¡Gracias por tu compra!</h2>
