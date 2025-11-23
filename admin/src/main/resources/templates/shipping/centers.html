@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(title=${title}, content=~{::section})}">
+<section>
+  <div class="header-row">
+    <h2>Centros de Distribución</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+    <div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Región</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="c : ${centers}">
+            <td th:text="${c.id}">1</td>
+            <td th:text="${c.nombre}">CD Lima</td>
+            <td th:text="${c.region}">Lima</td>
+            <td>
+              <form th:action="@{'/admin/shipping/centers/' + ${c.id} + '/delete'}" method="post" style="display:inline">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" class="btn secondary" onclick="return confirm('¿Eliminar centro?')">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <form th:action="@{/admin/shipping/centers}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <div style="display:grid;gap:10px">
+          <label>
+            Nombre
+            <input type="text" name="nombre" th:value="${center.nombre}" required />
+          </label>
+          <label>
+            Región
+            <input type="text" name="region" th:value="${center.region}" required />
+          </label>
+          <button type="submit" class="btn">Crear</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+</html>

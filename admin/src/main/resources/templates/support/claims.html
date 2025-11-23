@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="layout :: layout('Reclamaciones', ~{::section})">
+<section>
+  <div class="card">
+    <h2>Reclamaciones</h2>
+    <form method="get" class="filters" style="display:grid; grid-template-columns: repeat(5, minmax(120px,1fr)); gap:8px; margin:8px 0 16px; align-items:end;">
+      <label>Buscar
+        <input type="text" name="q" th:value="${q}" placeholder="email u orden" />
+      </label>
+      <label>Estado
+        <select name="estado" th:value="${estado}">
+          <option value="">Todos</option>
+          <option value="registrado" th:selected="${estado=='registrado'}">Registrado</option>
+          <option value="en_proceso" th:selected="${estado=='en_proceso'}">En proceso</option>
+          <option value="resuelto" th:selected="${estado=='resuelto'}">Resuelto</option>
+          <option value="rechazado" th:selected="${estado=='rechazado'}">Rechazado</option>
+        </select>
+      </label>
+      <label>Desde
+        <input type="date" name="desde" th:value="${desde}" />
+      </label>
+      <label>Hasta
+        <input type="date" name="hasta" th:value="${hasta}" />
+      </label>
+      <div>
+        <button class="btn" type="submit">Filtrar</button>
+        <a class="btn secondary" th:href="@{/admin/support/claims}">Limpiar</a>
+      </div>
+    </form>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Orden</th>
+          <th>Email</th>
+          <th>Tipo</th>
+          <th>Estado</th>
+          <th>Fecha</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="c : ${claims}">
+          <td th:text="${c.id}">1</td>
+          <td th:text="${c.orderNumber}">SF123</td>
+          <td th:text="${c.email}">user@mail.com</td>
+          <td th:text="${c.tipo}">reclamo</td>
+          <td th:text="${c.estado}">registrado</td>
+          <td th:text="${c.createdAt}">2025-01-01</td>
+          <td><a th:href="@{'/admin/support/claims/' + ${c.id}}">Ver</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout (title='Colores', content=~{::section})}">
+<section>
+  <div class="header-row">
+    <h1>Colores</h1>
+    <form method="post" th:action="@{/admin/colors}" style="display:flex;gap:8px;align-items:flex-end">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+      <label>Nombre
+        <input type="text" name="nombre" required />
+      </label>
+      <label>HEX
+        <input type="text" name="codigoHex" placeholder="#FF0000" />
+      </label>
+      <button class="btn" type="submit">Agregar</button>
+    </form>
+  </div>
+  <table class="table">
+    <thead><tr><th>ID</th><th>Nombre</th><th>HEX</th><th></th></tr></thead>
+    <tbody>
+      <tr th:if="${#lists.isEmpty(colors)}"><td colspan="4" class="muted">No hay colores.</td></tr>
+      <tr th:each="c : ${colors}">
+        <td th:text="${c.id}"></td>
+        <td th:text="${c.nombre}"></td>
+        <td>
+          <span th:text="${c.codigoHex}"></span>
+          <span th:if="${c.codigoHex}" th:style="${'display:inline-block;width:16px;height:16px;margin-left:6px;background:'+c.codigoHex+';border:1px solid #ddd;border-radius:3px'}"></span>
+        </td>
+        <td>
+          <form method="post" th:action="@{'/admin/colors/' + ${c.id} + '/delete'}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <button class="btn danger" type="submit">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+</html>

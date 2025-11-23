@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="layout :: layout(${title}, ~{::section})">
+<section>
+  <div class="card">
+    <h2 th:text="${title}">Colección</h2>
+  <form method="post" th:action="${item.id} != null ? @{/admin/collections/{id}(id=${item.id})} : @{/admin/collections}">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+      <div class="row">
+        <label>Nombre
+          <input name="nombre" th:value="${item.nombre}" required />
+        </label>
+        <label>Slug
+          <input name="slug" th:value="${item.slug}" placeholder="amigable-url" />
+        </label>
+      </div>
+      <div class="row">
+        <label>Imagen (URL)
+          <input name="imageUrl" th:value="${item.imageUrl}" />
+        </label>
+        <label>Orden
+          <input name="orden" type="number" th:value="${item.orden}" />
+        </label>
+        <label style="display:flex; align-items:center; gap:8px; margin-top:20px;">
+          <input type="checkbox" name="activo" th:checked="${item.activo}" /> Activo
+        </label>
+      </div>
+      <div class="row">
+        <label style="width:100%">Descripción
+          <textarea name="descripcion" rows="3" th:text="${item.descripcion}"></textarea>
+        </label>
+      </div>
+      <div class="row">
+        <label style="width:100%">Productos (IDs separados por coma)
+          <textarea name="productIds" rows="3" th:text="${productIds}" placeholder="12,45,78"></textarea>
+        </label>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button class="btn" type="submit">Guardar</button>
+        <a class="btn secondary" th:href="@{/admin/collections}">Volver</a>
+      </div>
+    </form>
+
+    <div style="display:flex; margin-top:10px;">
+      <form th:if="${item.id != null}" th:action="@{'/admin/collections/' + ${item.id} + '/delete'}" method="post" style="margin-left:auto">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <button class="btn danger" type="submit" onclick="return confirm('¿Eliminar colección?')">Eliminar</button>
+      </form>
+    </div>
+  </div>
+  <div class="card" th:if="${item.imageUrl}">
+    <h3>Preview</h3>
+    <img th:src="${item.imageUrl}" alt="preview" style="max-width:100%; height:auto;" />
+  </div>
+</section>
+</html>

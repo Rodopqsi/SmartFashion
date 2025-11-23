@@ -1,0 +1,46 @@
+.inputGroup { position:relative; margin: 10px 0; font-family: inherit; overflow: hidden; }
+.inputGroup input { width:100%; padding: 14px 14px; border-radius: 12px; border: 1.5px solid var(--color-border); background: var(--color-bg-soft); color: var(--color-text); font: inherit; outline: none; transition: border-color .2s ease, box-shadow .2s ease, background .2s ease; }
+.theme-dark .inputGroup input { background: var(--color-bg-soft); }
+.inputGroup input::placeholder { color: var(--color-text-soft); opacity: 0.9; }
+.inputGroup label { position:absolute; top:50%; left:12px; right:auto !important; transform: translateY(-50%); color: var(--color-text-soft); background: transparent; padding: 0 6px; pointer-events:none; transition: transform .2s ease, top .2s ease, color .2s ease, background .2s ease; max-width: calc(100% - 28px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index:3; box-shadow:none; }
+.inputGroup input:focus { border-color: var(--color-accent); box-shadow: 0 0 0 2px rgba(37,99,235,0.2); background: var(--color-bg); }
+.theme-dark .inputGroup input:focus { background: var(--color-bg); }
+.inputGroup input:focus ~ label,
+.inputGroup.filled label,
+.inputGroup input:not(:placeholder-shown) ~ label { top: 0; transform: translateY(-50%) scale(0.88); background: var(--color-bg); color: var(--color-text); max-width: calc(100% - 28px); left:12px; right:auto !important; }
+.theme-dark .inputGroup input:focus ~ label,
+.theme-dark .inputGroup.filled label,
+.theme-dark .inputGroup input:not(:placeholder-shown) ~ label { background: var(--color-bg); }
+
+
+.inputGroup select { width:100%; padding: 14px 14px; border-radius: 12px; border: 1.5px solid var(--color-border); background: var(--color-bg-soft); color: var(--color-text); font: inherit; outline: none; transition: border-color .2s ease, box-shadow .2s ease, background .2s ease; appearance:auto; }
+.inputGroup select:focus { border-color: var(--color-accent); box-shadow: 0 0 0 2px rgba(37,99,235,0.2); background: var(--color-bg); }
+.inputGroup select + label { position:absolute; top:50%; left:12px; transform: translateY(-50%); color: var(--color-text-soft); background: transparent; padding: 0 6px; pointer-events:none; transition: transform .2s ease, top .2s ease, color .2s ease, background .2s ease; }
+.inputGroup select:focus ~ label,
+.inputGroup.filled label { top:0; transform: translateY(-50%) scale(0.88); background: var(--color-bg); color: var(--color-text); }
+.theme-dark .inputGroup select:focus ~ label,
+.theme-dark .inputGroup.filled label { background: var(--color-bg); }
+.inputGroup.has-error select { border-color:#dc2626; box-shadow: 0 0 0 2px rgba(220,38,38,0.15); }
+.inputGroup.has-error label { color:#dc2626; }
+
+
+.if-icon-left { position:absolute; left:12px; top:50%; transform: translateY(-50%); opacity:.7; font-size: 1rem; }
+.inputGroup .if-icon-left + input { padding-left: 38px; }
+
+
+.inputGroup.has-error input { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220,38,38,0.15); }
+.inputGroup.has-error label { color: #dc2626; }
+
+.if-error-msg { position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:.72rem; color:#dc2626; background:transparent; padding:0; pointer-events:none; }
+
+
+.inputGroup.is-disabled input { opacity:.75; cursor:not-allowed; }
+
+
+.inputGroup input, .inputGroup select, .inputGroup textarea { color: var(--color-text); }
+.inputGroup textarea { width:100%; padding:14px; border-radius:12px; border:1.5px solid var(--color-border); background:var(--color-bg-soft); font:inherit; outline:none; resize:vertical; }
+
+
+.theme-dark .inputGroup input::placeholder,
+.theme-dark .inputGroup select::placeholder,
+.theme-dark .inputGroup textarea::placeholder { color: var(--color-text-soft); opacity: 0.85; }

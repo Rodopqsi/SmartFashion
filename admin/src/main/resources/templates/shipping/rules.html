@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(title=${title}, content=~{::section})}">
+<section>
+  <div class="header-row">
+    <h2>Reglas de Envío</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+    <div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Origen</th>
+            <th>Destino</th>
+            <th>Empresa</th>
+            <th>Prioridad</th>
+            <th>Costo</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="r : ${rules}">
+            <td th:text="${r.id}">1</td>
+            <td th:text="${r.origenRegion}">Lima</td>
+            <td th:text="${r.destinoRegion}">Arequipa</td>
+            <td th:text="${r.empresaEnvio.nombre}">CourierX</td>
+            <td th:text="${r.prioridad}">1</td>
+            <td th:text="${#numbers.formatDecimal(r.costo,1,'COMMA',2,'POINT')}">0.00</td>
+            <td>
+              <form th:action="@{'/admin/shipping/rules/' + ${r.id} + '/delete'}" method="post" style="display:inline">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" class="btn secondary" onclick="return confirm('¿Eliminar regla?')">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <form th:action="@{/admin/shipping/rules}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <div style="display:grid;gap:10px">
+          <label>
+            Origen (región)
+            <input type="text" name="origenRegion" th:value="${rule.origenRegion}" required />
+          </label>
+          <label>
+            Destino (región)
+            <input type="text" name="destinoRegion" th:value="${rule.destinoRegion}" required />
+          </label>
+          <label>
+            Empresa
+            <select name="empresaEnvio.id" required>
+              <option value="" disabled selected>Seleccione</option>
+              <option th:each="c : ${companies}" th:value="${c.id}" th:text="${c.nombre}"></option>
+            </select>
+          </label>
+          <label>
+            Prioridad (1 = alta)
+            <input type="number" name="prioridad" th:value="${rule.prioridad}" min="1" step="1" required />
+          </label>
+          <label>
+            Costo (S/)
+            <input type="number" name="costo" th:value="${rule.costo}" min="0" step="0.01" required />
+          </label>
+          <button type="submit" class="btn">Crear</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+</html>

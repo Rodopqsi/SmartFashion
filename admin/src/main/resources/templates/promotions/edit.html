@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout (title=${'Editar ' + promo.nombre}, content=~{::section})}">
+<section>
+  <a th:href="@{/admin/promotions}">← Volver</a>
+  <h1 th:text="${promo.nombre}">Editar</h1>
+
+  <form method="post" th:action="@{'/admin/promotions/' + ${promo.id}}" class="grid two">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" name="nombre" th:value="${promo.nombre}" required />
+    </div>
+    <div class="field">
+      <label>Código</label>
+      <input type="text" name="codigo" th:value="${promo.codigo}" />
+    </div>
+    <div class="field">
+      <label>Tipo de descuento</label>
+      <select name="tipoDescuento" required>
+        <option value="PORCENTAJE" th:selected="${promo.tipoDescuento == 'PORCENTAJE'}">PORCENTAJE</option>
+        <option value="MONTO_FIJO" th:selected="${promo.tipoDescuento == 'MONTO_FIJO'}">MONTO_FIJO</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Valor</label>
+      <input type="number" name="valor" step="0.01" th:value="${promo.valor}" required />
+    </div>
+    <div class="field">
+      <label>Inicio</label>
+      <input type="datetime-local" name="fechaInicio" th:value="${#temporals.format(promo.fechaInicio, 'yyyy-MM-dd''T''HH:mm')}" required />
+    </div>
+    <div class="field">
+      <label>Fin</label>
+      <input type="datetime-local" name="fechaFin" th:value="${#temporals.format(promo.fechaFin, 'yyyy-MM-dd''T''HH:mm')}" required />
+    </div>
+    <div class="field">
+      <label>Activa</label>
+      <select name="activo">
+        <option value="1" th:selected="${promo.activo == 1}">Sí</option>
+        <option value="0" th:selected="${promo.activo == 0}">No</option>
+      </select>
+    </div>
+    <div style="align-self:end">
+      <button class="btn" type="submit">Guardar</button>
+    </div>
+  </form>
+
+  <h3>Condiciones</h3>
+  <div class="grid two">
+    <form method="post" th:action="@{'/admin/promotions/' + ${promo.id} + '/apply/product'}" style="display:flex;gap:8px;align-items:end">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+      <label>Producto
+        <select name="productId">
+          <option th:each="p : ${products}" th:value="${p.id}" th:text="${p.nombre}"></option>
+        </select>
+      </label>
+      <button class="btn" type="submit">Añadir</button>
+    </form>
+
+    <form method="post" th:action="@{'/admin/promotions/' + ${promo.id} + '/apply/category'}" style="display:flex;gap:8px;align-items:end">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+      <label>Categoría
+        <select name="categoryId">
+          <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.nombre}"></option>
+        </select>
+      </label>
+      <button class="btn" type="submit">Añadir</button>
+    </form>
+  </div>
+
+  <table class="table" style="margin-top:12px">
+    <thead><tr><th>ID</th><th>Tipo</th><th>Nombre</th><th></th></tr></thead>
+    <tbody>
+      <tr th:if="${#lists.isEmpty(apps)}"><td colspan="4" class="muted">Sin condiciones.</td></tr>
+      <tr th:each="a : ${apps}">
+        <td th:text="${a.id}"></td>
+        <td th:text="${a.producto != null ? 'Producto' : 'Categoría'}"></td>
+        <td th:text="${a.producto != null ? a.producto.nombre : a.categoria.nombre}"></td>
+        <td>
+          <form method="post" th:action="@{'/admin/promotions/' + ${promo.id} + '/apps/' + ${a.id} + '/delete'}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <button class="btn danger" type="submit">Quitar</button>
+          </form>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+</html>

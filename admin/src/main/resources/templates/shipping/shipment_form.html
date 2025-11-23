@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(title=${title}, content=~{::section})}">
+<section>
+  <div class="header-row">
+    <h2>Nuevo Envío</h2>
+  </div>
+  <form method="get" th:action="@{/admin/shipments/new}" style="margin-bottom:12px">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label>
+        Buscar pedido (orderNumber)
+        <input type="text" name="orderNumber" th:value="${searchedOrderNumber}" placeholder="Ej: ORD-0001" />
+      </label>
+      <button type="submit" class="btn secondary">Buscar</button>
+    </div>
+  </form>
+
+  <form th:action="@{/admin/shipments}" method="post">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="display:grid;gap:10px">
+        <label>
+          ID Pedido
+          <input type="text" name="orderId" th:value="${foundOrder != null ? foundOrder.orderNumber : shipment.orderId}" required />
+        </label>
+        <label>
+          Centro de Distribución
+          <select name="centroDistribucion.id" required>
+            <option value="" disabled selected>Seleccione</option>
+            <option th:each="c : ${centers}" th:value="${c.id}" th:text="${c.nombre + ' (' + c.region + ')'}"></option>
+          </select>
+        </label>
+        <label>
+          Destinatario
+          <input type="text" name="destinatario" th:value="${foundOrder != null ? foundOrder.email : shipment.destinatario}" required />
+        </label>
+        <label>
+          Dirección
+          <input type="text" name="direccion" th:value="${shipment.direccion}" required />
+        </label>
+        <label>
+          Región destino
+          <input type="text" name="regionDestino" th:value="${shipment.regionDestino}" required />
+        </label>
+        <label>
+          Código Tracking (opcional)
+          <input type="text" name="codigoTracking" th:value="${shipment.codigoTracking}" />
+        </label>
+      </div>
+      <div th:if="${foundOrder != null}" style="border:1px solid #eee;border-radius:8px;padding:12px">
+        <div style="font-weight:700;margin-bottom:6px">Pedido</div>
+        <div><strong>Número:</strong> <span th:text="${foundOrder.orderNumber}">ORD</span></div>
+        <div><strong>Email:</strong> <span th:text="${foundOrder.email}">mail</span></div>
+        <div><strong>Total:</strong> S/ <span th:text="${#numbers.formatDecimal(foundOrder.total,1,'COMMA',2,'POINT')}">0.00</span></div>
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      <button type="submit" class="btn">Crear Envío</button>
+      <a class="btn secondary" th:href="@{/admin/shipments}">Cancelar</a>
+    </div>
+  </form>
+</section>
+</html>

@@ -98,7 +98,6 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# Email configuration (real sending)
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', '')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
@@ -107,3 +106,11 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('1','true','yes')
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() in ('1','true','yes')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'no-reply@smarthfashion.local')
+
+if DEBUG:
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+    SECURE_CROSS_ORIGIN_EMBEDDER_POLICY = None
+
+SSO_SHARED_SECRET = os.getenv('SSO_SHARED_SECRET', '')
+SPRING_ADMIN_SSO_ENDPOINT = os.getenv('SPRING_ADMIN_SSO_ENDPOINT', 'http://localhost:8081/sso/login')
+LOGIN_URL = os.getenv('DJANGO_LOGIN_URL', '/admin/login/')

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(title=${title}, content=~{::section})}">
+<section>
+  <div class="header-row">
+    <h2>Empresas de Envío</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+    <div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Cobertura</th>
+            <th>Tracking URL Base</th>
+            <th>Activo</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="c : ${companies}">
+            <td th:text="${c.id}">1</td>
+            <td th:text="${c.nombre}">Name</td>
+            <td th:text="${c.cobertura}">Nacional</td>
+            <td th:text="${c.trackingUrlBase}">https://...</td>
+            <td>
+              <span th:text="${c.activo} ? 'Sí' : 'No'"></span>
+            </td>
+            <td>
+              <form th:action="@{'/admin/shipping/companies/' + ${c.id} + '/delete'}" method="post" style="display:inline">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" class="btn secondary" onclick="return confirm('¿Eliminar empresa?')">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <form th:action="@{/admin/shipping/companies}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <div style="display:grid;gap:10px">
+          <label>
+            Nombre
+            <input type="text" name="nombre" th:value="${company.nombre}" required />
+          </label>
+          <label>
+            Cobertura (ej. Lima, Nacional, Internacional)
+            <input type="text" name="cobertura" th:value="${company.cobertura}" required />
+          </label>
+          <label>
+            Tracking URL Base (opcional)
+            <input type="url" name="trackingUrlBase" th:value="${company.trackingUrlBase}" placeholder="https://tracking.ejemplo.com/" />
+          </label>
+          <label style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" name="activo" th:checked="${company.activo}" /> Activo
+          </label>
+          <button type="submit" class="btn">Crear</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+</html>

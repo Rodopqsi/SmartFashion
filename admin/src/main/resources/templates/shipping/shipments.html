@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(title=${title}, content=~{::section})}">
+<section>
+  <div class="header-row">
+    <h2>Envíos</h2>
+    <div style="color:#6b7280;font-size:13px">Los envíos se crean automáticamente al confirmar el pago.</div>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Pedido</th>
+        <th>Centro</th>
+        <th>Empresa</th>
+        <th>Destino</th>
+  <th>Costo</th>
+        <th>Status</th>
+        <th>Creado</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="s : ${shipments}">
+        <td th:text="${s.id}">1</td>
+        <td th:text="${s.orderId}">ORD-1</td>
+        <td th:text="${s.centroDistribucion != null ? s.centroDistribucion.nombre : '-'}">CD</td>
+        <td th:text="${s.empresaEnvio != null ? s.empresaEnvio.nombre : '-'}">Empresa</td>
+  <td th:text="${s.regionDestino}">Lima</td>
+  <td th:text="${s.costoEnvio != null ? #numbers.formatDecimal(s.costoEnvio,1,'COMMA',2,'POINT') : '-'}">0.00</td>
+        <td th:text="${s.status}">CREADO</td>
+        <td th:text="${#temporals.format(s.creadoEn, 'yyyy-MM-dd HH:mm')}">fecha</td>
+        <td>
+          <a class="btn secondary" th:href="@{'/admin/shipments/' + ${s.id}}">Ver</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+</html>

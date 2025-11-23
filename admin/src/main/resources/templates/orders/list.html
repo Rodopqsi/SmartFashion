@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(title=${title}, content=~{::section})}">
+<section>
+  <div class="header-row" style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+    <h2>Pedidos</h2>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" name="q" th:value="${q}" placeholder="Buscar por N° pedido o email" />
+        <label>Desde <input type="date" name="from" th:value="${from}" /></label>
+        <label>Hasta <input type="date" name="to" th:value="${to}" /></label>
+        <label>Estado
+          <select name="status">
+            <option value="" th:selected="${status} == null">Todos</option>
+            <option th:each="s : ${statuses}"
+                    th:value="${s}"
+                    th:text="${#strings.replace(s.name(),'_',' ')}"
+                    th:selected="${status} == ${s}">
+            </option>
+          </select>
+        </label>
+        <label>Página
+          <input type="number" min="1" name="page" th:value="${page.number + 1}" style="width:70px" />
+        </label>
+        <label>Tamaño
+          <input type="number" min="5" max="200" name="size" th:value="${size}" style="width:80px" />
+        </label>
+        <button type="submit" class="btn secondary">Filtrar</button>
+        <a class="btn" th:href="@{/admin/orders}">Limpiar</a>
+      </form>
+      <a class="btn" th:href="@{'/admin/orders/export'(q=${q},from=${from},to=${to},status=${status})}">Exportar CSV</a>
+    </div>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>N° Pedido</th>
+  <th>Email</th>
+  <th>Estado</th>
+        <th>Subtotal</th>
+        <th>IGV</th>
+        <th>Total</th>
+        <th>Fecha</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="o : ${orders}">
+        <td th:text="${o.id}">1</td>
+        <td th:text="${o.orderNumber}">SF...</td>
+        <td th:text="${o.email}">mail</td>
+        <td th:text="${o.status != null ? #strings.replace(o.status.name(),'_',' ') : 'PAGADO'}">PAGADO</td>
+        <td th:text="${#numbers.formatDecimal(o.subtotal,1,'COMMA',2,'POINT')}">0.00</td>
+        <td th:text="${#numbers.formatDecimal(o.igv,1,'COMMA',2,'POINT')}">0.00</td>
+        <td th:text="${#numbers.formatDecimal(o.total,1,'COMMA',2,'POINT')}">0.00</td>
+        <td th:text="${o.createdAt != null ? #temporals.format(o.createdAt, 'yyyy-MM-dd HH:mm') : ''}">fecha</td>
+        <td><a class="btn secondary" th:href="@{'/admin/orders/' + ${o.id}}">Ver</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="pagination" th:if="${page != null}">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+      <span th:text="'Total: ' + ${page.totalElements}"></span>
+      <a class="btn secondary" th:if="${page.hasPrevious()}"
+         th:href="@{'/admin/orders'(q=${q},from=${from},to=${to},status=${status},page=${page.number},size=${size})}">Anterior</a>
+      <span th:text="${page.number + 1} + ' / ' + ${page.totalPages == 0 ? 1 : page.totalPages}">1/1</span>
+      <a class="btn secondary" th:if="${page.hasNext()}"
+         th:href="@{'/admin/orders'(q=${q},from=${from},to=${to},status=${status},page=${page.number + 2},size=${size})}">Siguiente</a>
+    </div>
+  </div>
+</section>
+</html>

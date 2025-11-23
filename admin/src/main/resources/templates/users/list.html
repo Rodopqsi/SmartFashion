@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout (title='Usuarios', content=~{::section})}">
+<section>
+  <div class="header-row">
+    <h1>Usuarios</h1>
+    <form method="get" style="margin-left:auto;display:flex;gap:8px">
+      <input type="text" name="q" th:value="${q}" placeholder="Buscar por nombre o email" />
+      <button class="btn secondary" type="submit">Buscar</button>
+    </form>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Apellido</th>
+        <th>Email</th>
+        <th>Teléfono</th>
+        <th>Registrado</th>
+        <th>Estado</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:if="${#lists.isEmpty(users)}">
+        <td colspan="8" class="muted">No hay usuarios registrados.</td>
+      </tr>
+      <tr th:each="u : ${users}">
+        <td th:text="${u.id}"></td>
+        <td th:text="${u.nombre}"></td>
+        <td th:text="${u.apellido}"></td>
+        <td th:text="${u.email}"></td>
+        <td th:text="${u.telefono}"></td>
+        <td th:text="${#dates.format(new java.util.Date(u.fechaRegistro), 'yyyy-MM-dd HH:mm')}"></td>
+        <td>
+          <span th:text="${u.bloqueado} ? 'Bloqueado' : 'Activo'"></span>
+        </td>
+        <td>
+          <form th:if="${!u.bloqueado}" th:action="@{'/admin/users/' + ${u.id} + '/block'}" method="post" style="display:inline">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <button class="btn danger" type="submit">Bloquear</button>
+          </form>
+          <form th:if="${u.bloqueado}" th:action="@{'/admin/users/' + ${u.id} + '/unblock'}" method="post" style="display:inline">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <button class="btn" type="submit">Desbloquear</button>
+          </form>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+</html>

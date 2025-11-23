@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title th:text="${title}">Panel</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}" />
+  <style> body{font-family:Inter,system-ui,Arial;margin:0} .topbar{position:sticky;top:0;z-index:10;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #eee;background:#fff} .brand{font-weight:800} .container{max-width:1000px;margin:0 auto;padding:16px} .card{border:1px solid #eee;border-radius:8px;padding:12px} a{color:#2563eb;text-decoration:none}</style>
+  </head>
+<body>
+  <nav class="topbar">
+    <div class="brand">SmartFashion Admin</div>
+    <div class="links">
+      <a th:href="@{/admin}">Dashboard</a>
+      <a th:href="@{/admin/products}">Productos</a>
+      <a href="/logout">Salir</a>
+    </div>
+  </nav>
+  <main class="container">
+    <div class="card">
+      <h1>Panel</h1>
+      <p>Bienvenido al panel administrativo. Desde aquí podrás gestionar productos, categorías, usuarios y pedidos.</p>
+      <ul>
+        <li><a th:href="@{/admin/products}">Gestionar productos</a></li>
+      </ul>
+      <div class="hint" style="margin-top:8px;color:#666">Si ves errores 500, revisa variables DB_* y credenciales.</div>
+    </div>
+  </main>
+</body>
+</html>

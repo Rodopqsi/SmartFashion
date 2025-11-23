@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:fragment="layout (title, content)">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title th:text="${title}">Admin</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}" />
+</head>
+<body class="has-sidebar" x-data>
+  <div class="app-shell">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <button id="sidebarClose" aria-label="Cerrar">×</button>
+        <div class="brand">SmartFashion Admin</div>
+      </div>
+      <nav class="menu">
+        <a th:href="@{/admin}">Dashboard</a>
+        <div class="menu-group">
+          <button class="menu-group-toggle" type="button" aria-expanded="false">
+            Productos
+            <span class="caret" aria-hidden="true">▸</span>
+          </button>
+          <div class="submenu" hidden>
+            <a th:href="@{/admin/products}">Listado</a>
+            <a th:href="@{/admin/categories}">Categorías</a>
+            <a th:href="@{/admin/colors}">Colores</a>
+            <a th:href="@{/admin/sizes}">Tallas</a>
+            <a th:href="@{/admin/promotions}">Promociones</a>
+            <a th:href="@{/admin/collections}">Colecciones</a>
+          </div>
+        </div>
+        <div class="menu-group">
+          <button class="menu-group-toggle" type="button" aria-expanded="false">
+            Logística
+            <span class="caret" aria-hidden="true">▸</span>
+          </button>
+          <div class="submenu" hidden>
+            <a th:href="@{/admin/orders}">Pedidos</a>
+            <a th:href="@{/admin/shipments}">Envíos</a>
+            <a th:href="@{/admin/shipping/companies}">Empresas</a>
+            <a th:href="@{/admin/shipping/centers}">Centros</a>
+            <a th:href="@{/admin/shipping/rules}">Reglas</a>
+          </div>
+        </div>
+        <div class="menu-group">
+          <button class="menu-group-toggle" type="button" aria-expanded="false">
+            Soporte
+            <span class="caret" aria-hidden="true">▸</span>
+          </button>
+          <div class="submenu" hidden>
+            <a th:href="@{/admin/support/claims}">Reclamaciones</a>
+            <a th:href="@{/admin/support/returns}">Devoluciones</a>
+          </div>
+        </div>
+        <a th:href="@{/admin/users}">Usuarios</a>
+        <form id="logoutForm" th:action="@{/logout}" method="post" style="display:none">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        </form>
+        <a href="#" onclick="document.getElementById('logoutForm').submit(); return false;">Salir</a>
+      </nav>
+    </aside>
+    <div class="content">
+      <header class="topbar">
+        <button id="sidebarToggle" class="burger" aria-label="Menú">☰</button>
+        <div class="topbar-title" th:text="${title}">Admin</div>
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+          <button id="themeToggle" aria-label="Cambiar tema" title="Cambiar tema" style="background:transparent;border:none;cursor:pointer;font-size:18px;padding:6px;border-radius:8px">🌙</button>
+        </div>
+      </header>
+      <main class="container">
+        <section th:replace="${content}">Contenido</section>
+      </main>
+    </div>
+  </div>
+  <script>
+    // Theme toggle: read/write localStorage and apply .theme-dark to html element
+    (function(){
+      try{
+        var current = localStorage.getItem('admin-theme') || 'light';
+        var root = document.documentElement || document.body;
+        function applyTheme(t){
+          if(t === 'dark') root.classList.add('theme-dark'); else root.classList.remove('theme-dark');
+          var btn = document.getElementById('themeToggle');
+          if(btn) btn.textContent = t === 'dark' ? '☀️' : '🌙';
+        }
+        applyTheme(current);
+        var toggle = document.getElementById('themeToggle');
+        if(toggle){ toggle.addEventListener('click', function(){
+          current = current === 'dark' ? 'light' : 'dark';
+          localStorage.setItem('admin-theme', current);
+          applyTheme(current);
+        }); }
+      }catch(e){ console.error(e); }
+    })();
+
+    (function(){
+      var sidebar = document.getElementById('sidebar');
+      var toggle = document.getElementById('sidebarToggle');
+      var closeBtn = document.getElementById('sidebarClose');
+      function open(){ document.body.classList.add('sidebar-open'); }
+      function close(){ document.body.classList.remove('sidebar-open'); }
+      function collapseSubmenus(){
+        var submenus = sidebar ? sidebar.querySelectorAll('.submenu') : [];
+        var carets = sidebar ? sidebar.querySelectorAll('.menu-group-toggle .caret') : [];
+        submenus && submenus.forEach && submenus.forEach(function(s){ s.hidden = true; });
+        carets && carets.forEach && carets.forEach(function(c){ c.style.transform = 'rotate(0deg)'; });
+        var toggles = sidebar ? sidebar.querySelectorAll('.menu-group-toggle') : [];
+        toggles && toggles.forEach && toggles.forEach(function(b){ b.setAttribute('aria-expanded','false'); });
+      }
+
+      if(toggle) toggle.addEventListener('click', function(){
+        if(document.body.classList.contains('sidebar-open')) { collapseSubmenus(); close(); } else { open(); }
+      });
+      if(closeBtn) closeBtn.addEventListener('click', function(){ collapseSubmenus(); close(); });
+      sidebar && sidebar.addEventListener('click', function(e){ if(e.target.tagName==='A') { collapseSubmenus(); close(); } });
+
+      if(sidebar){
+        sidebar.addEventListener('click', function(ev){
+          var btn = ev.target.closest ? ev.target.closest('.menu-group-toggle') : null;
+          if(btn && sidebar.contains(btn)){
+            ev.preventDefault();
+            ev.stopPropagation();
+            var expanded = btn.getAttribute('aria-expanded') === 'true';
+            btn.setAttribute('aria-expanded', String(!expanded));
+            var submenu = btn.nextElementSibling;
+            if(submenu){ submenu.hidden = expanded; }
+            var caret = btn.querySelector('.caret');
+            if(caret){ caret.style.transform = expanded ? 'rotate(0deg)' : 'rotate(90deg)'; }
+          }
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

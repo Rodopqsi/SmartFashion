@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="layout :: layout('Devoluciones', ~{::section})">
+<section>
+  <div class="card">
+    <h2>Devoluciones</h2>
+    <form method="get" class="filters" style="display:grid; grid-template-columns: repeat(5, minmax(120px,1fr)); gap:8px; margin:8px 0 16px; align-items:end;">
+      <label>Buscar
+        <input type="text" name="q" th:value="${q}" placeholder="email u orden" />
+      </label>
+      <label>Estado
+        <select name="estado" th:value="${estado}">
+          <option value="">Todos</option>
+          <option value="solicitado" th:selected="${estado=='solicitado'}">Solicitado</option>
+          <option value="aprobado" th:selected="${estado=='aprobado'}">Aprobado</option>
+          <option value="rechazado" th:selected="${estado=='rechazado'}">Rechazado</option>
+          <option value="recibido" th:selected="${estado=='recibido'}">Recibido</option>
+          <option value="reembolsado" th:selected="${estado=='reembolsado'}">Reembolsado</option>
+          <option value="completado" th:selected="${estado=='completado'}">Completado</option>
+        </select>
+      </label>
+      <label>Desde
+        <input type="date" name="desde" th:value="${desde}" />
+      </label>
+      <label>Hasta
+        <input type="date" name="hasta" th:value="${hasta}" />
+      </label>
+      <div>
+        <button class="btn" type="submit">Filtrar</button>
+        <a class="btn secondary" th:href="@{/admin/support/returns}">Limpiar</a>
+      </div>
+    </form>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Orden</th>
+          <th>Email</th>
+          <th>Motivo</th>
+          <th>Método</th>
+          <th>Estado</th>
+          <th>Fecha</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="r : ${returns}">
+          <td th:text="${r.id}">1</td>
+          <td th:text="${r.orderNumber}">SF123</td>
+          <td th:text="${r.email}">user@mail.com</td>
+          <td th:text="${r.motivo}">defectuoso</td>
+          <td th:text="${r.metodo}">reembolso</td>
+          <td th:text="${r.estado}">solicitado</td>
+          <td th:text="${r.createdAt}">2025-01-01</td>
+          <td><a th:href="@{'/admin/support/returns/' + ${r.id}}">Ver</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+</html>

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Error 500</title>
+  <link rel="stylesheet" th:href="@{/css/admin.css}" />
+</head>
+<body>
+  <div class="container" style="padding:24px">
+    <h1>Error interno (500)</h1>
+    <p>Ocurrió un problema procesando tu solicitud.</p>
+    <p th:if="${message}"><strong>Detalle:</strong> <span th:text="${message}"></span></p>
+    <div style="margin-top:12px">
+      <a class="btn" href="/admin">Volver al panel</a>
+    </div>
+  </div>
+</body>
+</html>

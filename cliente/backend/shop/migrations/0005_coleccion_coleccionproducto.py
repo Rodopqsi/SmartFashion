@@ -1,0 +1,40 @@
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('shop', '0004_claims_returns'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='Coleccion',
+            fields=[
+                ('id', models.BigAutoField(primary_key=True, serialize=False)),
+                ('nombre', models.CharField(max_length=255)),
+                ('slug', models.CharField(max_length=255)),
+                ('descripcion', models.TextField(null=True)),
+                ('activo', models.BooleanField(default=True)),
+                ('orden', models.IntegerField(default=0)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+            ],
+            options={
+                'managed': False,
+            },
+        ),
+        migrations.CreateModel(
+            name='ColeccionProducto',
+            fields=[
+                ('id', models.BigAutoField(primary_key=True, serialize=False)),
+                ('id_coleccion', models.BigIntegerField()),
+                ('id_producto', models.BigIntegerField()),
+            ],
+            options={
+                'db_table': 'ColeccionProducto',
+                'managed': False,
+            },
+        ),
+    ]

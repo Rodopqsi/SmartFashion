@@ -15,3 +15,13 @@ class ProductoCardSerializer(serializers.Serializer):
     categoria = CategoriaSerializer()
     image_preview = serializers.CharField()
     stock_total = serializers.IntegerField()
+
+
+class ColeccionSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    nombre = serializers.CharField()
+    slug = serializers.CharField()
+    descripcion = serializers.CharField(allow_null=True)
+    image_url = serializers.CharField(allow_null=True, required=False)
+    orden = serializers.IntegerField()
+    products = ProductoCardSerializer(many=True)

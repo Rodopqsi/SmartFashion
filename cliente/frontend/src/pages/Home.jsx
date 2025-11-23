@@ -1,131 +1,163 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
-import Catalogo from './Catalogo'
-// Asegúrate de que Link y useNavigate estén importados
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import './Home.css'
-import { useAuth } from '../auth.jsx'
 
 export default function Home(){
-  const { user, logout } = useAuth() || {}
-  const navigate = useNavigate()
-  const [scrolled, setScrolled] = useState(false)
-  const [openMenu, setOpenMenu] = useState(false)
-  const menuRef = useRef(null)
-  // Page state removed; routing now handles login/register pages
-  const [theme, setTheme] = useState(()=>{
-    if (typeof window !== 'undefined') return localStorage.getItem('theme') || 'light'
-    return 'light'
-  })
+  const [slides, setSlides] = useState([])
+  const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const location = useLocation()
+  const [active, setActive] = useState(0)
 
-  useEffect(()=>{
-    const onScroll = () => setScrolled(window.scrollY > 10)
-    window.addEventListener('scroll', onScroll, { passive:true })
-    onScroll()
-    return () => window.removeEventListener('scroll', onScroll)
-  },[])
+  const scrollToId = (id) => {
+    const el = document.getElementById(id)
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' })
+  }
 
-  useEffect(()=>{
-    const onDocClick = (e) => {
-      if (!menuRef.current) return
-      if (!menuRef.current.contains(e.target)) setOpenMenu(false)
-    }
-    const onEsc = (e) => { if (e.key === 'Escape') setOpenMenu(false) }
-    document.addEventListener('click', onDocClick)
-    document.addEventListener('keydown', onEsc)
-    return () => { document.removeEventListener('click', onDocClick); document.removeEventListener('keydown', onEsc) }
-  }, [])
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+    fetch(`${API_BASE}/api/home/`)
+      .then(r => r.json())
+      .then(j => { if (!alive) return; setData(j.data || {}); setError(null); setLoading(false) })
+      .catch(e => { if (!alive) return; console.error(e); setError('No se pudo cargar el home'); setLoading(false) })
+    return () => { alive = false }
+  }, [])
 
-  useEffect(()=>{
-    const root = document.documentElement
-    if (theme === 'dark') root.classList.add('theme-dark'); else root.classList.remove('theme-dark')
-    localStorage.setItem('theme', theme)
-  }, [theme])
+  
+  useEffect(()=>{
+    let mounted = true
+    fetch('/slides.json', { cache:'no-cache' })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('no slides')))
+      .then(arr => {
+        if (!mounted) return
+        if (Array.isArray(arr) && arr.length) setSlides(arr)
+        else setSlides([{ src:'/img/fondonuevo.jpg', href:'/catalogo' }])
+      })
+      .catch(()=>{ if (mounted) setSlides([{ src:'/img/fondonuevo.jpg', href:'/catalogo' }]) })
+    return ()=> { mounted = false }
+  }, [])
 
-  const toggleTheme = useCallback(()=> setTheme(t => t === 'light' ? 'dark' : 'light'), [])
+  
+  useEffect(()=>{
+    if (location.hash) {
+      const id = location.hash.replace('#','')
+      setTimeout(()=>scrollToId(id), 80)
+    }
+  }, [location.hash])
 
-  const heroImageUrl = '/img/fondonuevo.jpg' 
+  
+  useEffect(()=>{
+    const nodes = Array.from(document.querySelectorAll('.reveal'))
+    if (!nodes.length) return
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if (e.isIntersecting) e.target.classList.add('visible')
+      })
+    }, { threshold: 0.15 })
+    nodes.forEach(n=> io.observe(n))
+    return ()=> io.disconnect()
+  }, [loading])
 
-  const scrollToCatalogo = () => {
-    const el = document.getElementById('catalogo-section')
-    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' })
-  }
+  
+  useEffect(()=>{
+    if (!slides || slides.length <= 1) return
+    const id = setInterval(()=> setActive(a => (a+1) % slides.length), 6000)
+    return ()=> clearInterval(id)
+  }, [slides])
 
-  const scrollFactor = typeof window !== 'undefined' ? Math.min(1, window.scrollY / 220) : 0
-  const scrollAlpha = 0.9 * scrollFactor // 0 -> 0.9
-  const navBg = `rgba(${theme === 'dark' ? '15,17,21' : '255,255,255'}, ${scrollAlpha.toFixed(3)})`
+  const prevSlide = () => setActive(a => (a - 1 + slides.length) % slides.length)
+  const nextSlide = () => setActive(a => (a + 1) % slides.length)
 
-  return (
-    <div className="home-root">
-      <nav id="nav-bar" className={scrolled ? 'scrolled' : ''} style={{ background: navBg }}>
-        <div className="nav-left">
-          <button className="icon-btn" onClick={toggleTheme} aria-label="Cambiar tema" title="Cambiar tema">
-            {theme === 'light' ? '🌙' : '☀️'}
-          </button>
-          <div className="vertical-sep">|</div>
-          <button className="icon-btn" aria-label="Menú">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M19.5 8.25H4.5V6.75H19.5V8.25Z" fill="#000" />
-              <path fillRule="evenodd" clipRule="evenodd" d="M19.5 12.75H4.5V11.25H19.5V12.75Z" fill="#000" />
-              <path fillRule="evenodd" clipRule="evenodd" d="M19.5 17.25H4.5V15.75H19.5V17.25Z" fill="#000" />
-            </svg>
-            <span style={{fontWeight: 400, fontSize: '18px'}}>Menú</span>
-          </button>
-          <div className="vertical-sep">|</div>
-          <button className="icon-btn" aria-label="Buscar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span>Search</span>
-          </button>
-        </div>
-        
-        <div className="nav-center">
-            <a href="#new-arrivals" className="nav-link">New Arrivals</a>
-            {/* 🔑 CORRECCIÓN: Usamos <Link> para la navegación a /colecciones */}
-            <Link to="/colecciones" className="nav-link">Collections</Link> 
-            
-            <a href="#categories" className="nav-link" onClick={(e)=>{e.preventDefault();scrollToCatalogo();}}>Categories</a>
-            <a href="#sale" className="nav-link highlight">Sale</a>
-        </div>
-        
-        <div className="nav-right">
-          {user ? (
-            <div className="user-menu" ref={menuRef} style={{ position:'relative' }}>
-              <button className="icon-btn" onClick={()=>setOpenMenu(o=>!o)} aria-haspopup="menu" aria-expanded={openMenu}>
-                {user.username || user.email}
-              </button>
-              {openMenu && (
-                <div className="dropdown" role="menu" style={{ position:'absolute', right:0, top:'2.5rem', background:'var(--bg, #fff)', border:'1px solid #ddd', borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,.12)', minWidth:180, zIndex:1000 }}>
-                  <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/perfil') }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer' }}>Mi Perfil</button>
-                  <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/favoritos') }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer' }}>Mis Favoritos</button>
-                  <hr style={{ margin:'6px 0', border:'none', borderTop:'1px solid #eee' }}/>
-                  <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); logout() }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer', color:'#b00' }}>Cerrar Sesión</button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              <Link to="/login" className="icon-btn" style={{textDecoration:'none'}}>Iniciar Sesión</Link>
-              <Link to="/register" className="icon-btn" style={{textDecoration:'none'}}>Registrarse</Link>
-            </>
-          )}
-          <div className="vertical-sep">|</div>
-          <button className="icon-btn" aria-label="Carrito">
-            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20.2236 12.5257C19.6384 9.40452 19.3458 7.84393 18.2349 6.92196C17.124 6 15.5362 6 12.3606 6H11.6394C8.46386 6 6.87608 6 5.76518 6.92196C4.65428 7.84393 4.36167 9.40452 3.77645 12.5257C2.95353 16.9146 2.54207 19.1091 3.74169 20.5545C4.94131 22 7.17402 22 11.6394 22H12.3606C16.826 22 19.0587 22 20.2584 20.5545C20.9543 19.7159 21.108 18.6252 20.9537 17" stroke="#000" strokeWidth="2" strokeLinecap="round" />
-              <path d="M9 6V5C9 3.34315 10.3431 2 12 2C13.6569 2 15 3.34315 15 5V6" stroke="#1C274C" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            <span>My Cart</span>
-          </button>
-        </div>
-      </nav>
+  const collections = data?.collections || []
+  const featured = data?.featured_products || []
 
-      <header className="hero-full" style={{ backgroundImage:`url(${heroImageUrl})` }}>
-        <a href="#catalogo-section" onClick={(e)=>{e.preventDefault();scrollToCatalogo();}} className="shop-now-btn">Shop Now</a>
-      </header>
-      <section id="catalogo-section" className="catalogo-wrapper">
-        <Catalogo />
-      </section>
-    </div>
-  )
+  return (
+    <div className="home-root">
+      <header className="hero-full">
+        <div className="hero-slider">
+          {slides.map((s, i)=> {
+            const style = { backgroundImage:`url(${s.src})` }
+            const node = <div className={`hero-slide ${i===active ? 'active' : ''}`} style={style} />
+            return s.href ? (
+              <a key={i} href={s.href} className="hero-slide-link" aria-label={s.alt || `Banner ${i+1}`}>{node}</a>
+            ) : (
+              <div key={i}>{node}</div>
+            )
+          })}
+        </div>
+        {slides.length > 1 && (
+          <>
+            <div className="hero-arrows">
+              <button className="arrow prev" onClick={prevSlide} aria-label="Anterior">‹</button>
+              <button className="arrow next" onClick={nextSlide} aria-label="Siguiente">›</button>
+            </div>
+            <div className="hero-dots">
+              {slides.map((_, i)=> (
+                <button key={i} className={`dot ${i===active ? 'on' : ''}`} onClick={()=> setActive(i)} aria-label={`Slide ${i+1}`} />
+              ))}
+            </div>
+          </>
+        )}
+        <a href="#collections" onClick={(e)=>{e.preventDefault();scrollToId('collections');}} className="shop-now-btn">Explorar</a>
+      </header>
+
+      {}
+      <section id="new-arrivals" className="section">
+        <h2>Novedades</h2>
+        {loading && <div style={{ padding: 10 }}>Cargando...</div>}
+        {error && <div style={{ padding: 10, color: 'red' }}>{error}</div>}
+        {!loading && !error && (
+          <div className="h-scroll reveal" id="new-arrivals-scroll">
+            {featured.map(p => (
+              <Link key={p.id} to={`/producto/${p.id}`} className="snap-item" style={{ textDecoration:'none', color:'inherit', width:220 }}>
+                <div className="card">
+                  {p.image_preview ? (
+                    <img src={p.image_preview} alt={p.nombre} />
+                  ) : (
+                    <div style={{ width:'100%', height:180, background:'#f0f0f0' }} />
+                  )}
+                  <div className="body">
+                    <div style={{ fontWeight:700, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{p.nombre}</div>
+                    <div className="price">S/ {Number(p.precio).toFixed(2)}</div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {}
+      <section id="collections" className="section">
+        <h2>Colecciones</h2>
+        {loading && <div style={{ padding: 10 }}>Cargando...</div>}
+        {error && <div style={{ padding: 10, color: 'red' }}>{error}</div>}
+        {!loading && !error && (!collections.length ? (
+          <div style={{ color:'#666' }}>No hay colecciones disponibles.</div>
+        ) : (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:16 }} className="reveal">
+            {collections.map(col => (
+              <Link key={col.id} to={`/colecciones/${col.slug}`} style={{ textDecoration:'none', color:'inherit' }}>
+                <div style={{ position:'relative', borderRadius:12, overflow:'hidden', background:'#f8f8f8', minHeight:200, border:'1px solid #eee' }}>
+                  {col.image_url ? (
+                    <img src={col.image_url} alt={col.nombre} style={{ width:'100%', height:220, objectFit:'cover', display:'block' }} />
+                  ) : (
+                    <div style={{ width:'100%', height:220, background:'#f0f0f0' }} />
+                  )}
+                  <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'10px 12px', background:'linear-gradient(transparent, rgba(0,0,0,0.7))', color:'#fff' }}>
+                    <div style={{ fontWeight:800, letterSpacing:0.3 }}>{col.nombre}</div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ))}
+      </section>
+
+      {}
+    </div>
+  )
 }

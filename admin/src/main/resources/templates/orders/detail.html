@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(title=${title}, content=~{::section})}">
+<section>
+  <div class="header-row">
+    <h2 th:text="'Pedido ' + ${order.orderNumber}">Pedido</h2>
+    <a class="btn secondary" th:href="@{/admin/orders}">Volver</a>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-bottom:16px">
+    <div>
+      <div><strong>N° Pedido:</strong> <span th:text="${order.orderNumber}">SF...</span></div>
+      <div><strong>Email:</strong> <span th:text="${order.email}">mail</span></div>
+      <div><strong>Estado:</strong> <span th:text="${order.status != null ? #strings.replace(order.status.name(),'_',' ') : 'PAGADO'}">PAGADO</span></div>
+      <div><strong>Subtotal:</strong> S/ <span th:text="${#numbers.formatDecimal(order.subtotal,1,'COMMA',2,'POINT')}">0.00</span></div>
+      <div><strong>IGV:</strong> S/ <span th:text="${#numbers.formatDecimal(order.igv,1,'COMMA',2,'POINT')}">0.00</span></div>
+      <div><strong>Total:</strong> S/ <span th:text="${#numbers.formatDecimal(order.total,1,'COMMA',2,'POINT')}">0.00</span></div>
+      <div><strong>Fecha:</strong> <span th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm') : ''}">fecha</span></div>
+      <div style="margin-top:8px">
+        <a class="btn" th:href="@{'/tracking/' + ${order.orderNumber}}" target="_blank">Ver tracking público</a>
+      </div>
+      <div style="margin-top:8px">
+        <form th:action="@{'/admin/orders/' + ${order.id} + '/cancel'}" method="post" onsubmit="return confirm('¿Cancelar este pedido?');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+          <button type="submit" class="btn secondary" style="background:#fff;color:#b91c1c;border:1px solid #fecaca">Cancelar pedido</button>
+        </form>
+      </div>
+    </div>
+    <div>
+      <form th:action="@{'/admin/orders/' + ${order.id} + '/status'}" method="post" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <label>Actualizar estado
+          <select name="status">
+            <option th:each="s : ${statuses}"
+                    th:value="${s}"
+                    th:text="${#strings.replace(s.name(),'_',' ')}"
+                    th:selected="${order.status} == ${s}"></option>
+          </select>
+        </label>
+        <button type="submit" class="btn">Guardar</button>
+      </form>
+    </div>
+  </div>
+
+  <h3>Items</h3>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Producto</th>
+        <th>Talla</th>
+        <th>Color</th>
+        <th>Cant</th>
+        <th>Precio</th>
+        <th>Importe</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="it : ${items}">
+        <td th:text="${it.id}">1</td>
+        <td>
+          <div th:text="${it.name}">Nombre</div>
+          <div style="color:#6b7280;font-size:12px" th:text="'PID: ' + ${it.productId}">pid</div>
+        </td>
+        <td th:text="${it.sizeId}">-</td>
+        <td th:text="${it.colorId}">-</td>
+        <td th:text="${it.qty}">1</td>
+        <td th:text="${#numbers.formatDecimal(it.unitPrice,1,'COMMA',2,'POINT')}">0.00</td>
+        <td th:text="${#numbers.formatDecimal(it.amount,1,'COMMA',2,'POINT')}">0.00</td>
+        <td>
+          <form th:action="@{'/admin/orders/' + ${order.id} + '/items/' + ${it.id} + '/delete'}" method="post" onsubmit="return confirm('¿Eliminar este producto del pedido?');">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <button type="submit" class="btn secondary" style="background:#fff;color:#b91c1c;border:1px solid #fecaca">Quitar</button>
+          </form>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+</html>

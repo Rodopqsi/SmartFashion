@@ -1,0 +1,75 @@
+version: "3.8"
+services:
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - sf_net
+
+  backend:
+    build:
+      context: ../cliente/backend
+      dockerfile: Dockerfile
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    env_file:
+      - ./.env
+    volumes:
+      - ../cliente/backend:/app
+    depends_on:
+      - db
+    networks:
+      - sf_net
+
+  admin:
+    build:
+      context: ../admin
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+    networks:
+      - sf_net
+
+  frontend:
+    build:
+      context: ../cliente/frontend
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    depends_on:
+      - backend
+    networks:
+      - sf_net
+
+  proxy:
+    image: nginx:1.25
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d:ro
+      - frontend_static:/usr/share/nginx/html:ro
+      - certs:/etc/letsencrypt
+    depends_on:
+      - frontend
+      - backend
+      - admin
+    networks:
+      - sf_net
+
+volumes:
+  db_data:
+  frontend_static:
+  certs:
+
+networks:
+  sf_net:
+    driver: bridge

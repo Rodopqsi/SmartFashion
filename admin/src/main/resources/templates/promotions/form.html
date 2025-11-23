@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout (title='Nueva promoción', content=~{::section})}">
+<section>
+  <h1>Nueva promoción</h1>
+  <form method="post" th:action="@{/admin/promotions}" class="stack">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" name="nombre" required />
+    </div>
+    <div class="field">
+      <label>Código (opcional)</label>
+      <input type="text" name="codigo" />
+    </div>
+    <div class="field">
+      <label>Tipo de descuento</label>
+      <select name="tipoDescuento" required>
+        <option value="PORCENTAJE">PORCENTAJE</option>
+        <option value="MONTO_FIJO">MONTO_FIJO</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Valor</label>
+      <input type="number" name="valor" step="0.01" required />
+    </div>
+    <div class="field">
+      <label>Inicio (ISO)</label>
+      <input type="datetime-local" name="fechaInicio" required />
+    </div>
+    <div class="field">
+      <label>Fin (ISO)</label>
+      <input type="datetime-local" name="fechaFin" required />
+    </div>
+    <div class="field">
+      <label>Activa</label>
+      <select name="activo">
+        <option value="1">Sí</option>
+        <option value="0">No</option>
+      </select>
+    </div>
+    <div class="actions">
+      <button class="btn" type="submit">Guardar</button>
+      <a class="btn secondary" th:href="@{/admin/promotions}">Cancelar</a>
+    </div>
+  </form>
+</section>
+</html>

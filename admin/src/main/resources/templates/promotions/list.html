@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout (title='Promociones', content=~{::section})}">
+<section>
+  <div class="header-row">
+    <h1>Promociones</h1>
+    <a class="btn" th:href="@{/admin/promotions/new}">Nueva</a>
+  </div>
+  <table class="table">
+    <thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Valor</th><th>Vigencia</th><th>Activa</th><th></th></tr></thead>
+    <tbody>
+      <tr th:if="${#lists.isEmpty(promos)}"><td colspan="7" class="muted">No hay promociones.</td></tr>
+      <tr th:each="p : ${promos}">
+        <td th:text="${p.id}"></td>
+        <td th:text="${p.nombre}"></td>
+        <td th:text="${p.tipoDescuento}"></td>
+        <td th:text="${#numbers.formatDecimal(p.valor,1,'COMMA',2,'POINT')}"></td>
+        <td><span th:text="${#temporals.format(p.fechaInicio, 'yyyy-MM-dd HH:mm')}"></span> – <span th:text="${#temporals.format(p.fechaFin, 'yyyy-MM-dd HH:mm')}"></span></td>
+        <td th:text="${p.activo == 1 ? 'Sí' : 'No'}"></td>
+        <td><a class="btn secondary" th:href="@{'/admin/promotions/' + ${p.id} + '/edit'}">Editar</a></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+</html>
