@@ -13,7 +13,7 @@ public class Size {
     private String nombre;
 
     @Column
-    private String tipo; // ej. ropa, calzado
+    private String tipo; 
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

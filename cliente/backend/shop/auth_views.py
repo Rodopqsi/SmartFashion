@@ -39,20 +39,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         """
         uname = attrs.get('username') or ''
         if '@' in uname:
-            # Permitir login con email aunque existan duplicados: usar el primero.
             u = User.objects.filter(email=uname).order_by('id').first()
             if u:
                 attrs['username'] = u.username
         data = super().validate(attrs)
-        # TOTP enforcement disabled per current requirements
-        # (Previously: if totp_enabled then require valid otp)
         return data
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
-        # Record session using refresh token JTI
         if response.status_code == 200:
             try:
                 payload = response.data or {}
@@ -82,7 +78,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class CustomTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
-        # Before issuing new tokens, enforce 'revoked_after'
+
         rf = request.data.get('refresh')
         try:
             if rf:
@@ -118,7 +114,6 @@ def register(request):
     password = data.get('password')
     if not email or not password:
         return Response({'detail': 'Email y contraseña requeridos'}, status=400)
-    # Validación básica de username si se proporcionó
     import re
     if username and not re.fullmatch(r'[a-zA-Z0-9_\.\-]{3,20}', username):
         return Response({'detail': 'Username inválido. Use 3-20 caracteres: letras, números, _ . -'}, status=400)
@@ -128,15 +123,12 @@ def register(request):
         return Response({'detail': ' '.join([str(x) for x in e])}, status=400)
     try:
         user = User.objects.create_user(username=username, email=email, password=password)
-        # Requerir verificación de email
         user.is_active = False
         user.save()
     except IntegrityError:
         return Response({'detail': 'Usuario ya existe'}, status=400)
-    # Generar código de verificación (6 dígitos) y almacenarlo en cache por 10 minutos
     code = get_random_string(6, allowed_chars='0123456789')
     cache.set(f'verify:{email}', code, timeout=600)
-    # En entornos reales, enviar email. En DEBUG, podemos incluir el código en la respuesta.
     debug_mode = os.getenv('DEBUG', 'True').lower() in ('1', 'true', 'yes')
     try:
         send_mail(
@@ -148,7 +140,6 @@ def register(request):
         )
     except Exception as e:
         if debug_mode:
-            # En debug, no fallamos duro por correo
             pass
         else:
             return Response({'detail': 'No se pudo enviar el correo de verificación'}, status=500)
@@ -187,18 +178,15 @@ def google_oauth(request):
     if not token:
         return Response({'detail': 'credential requerido'}, status=400)
     client_id = (os.getenv('GOOGLE_CLIENT_ID') or '').strip()
-    # Fallback para desarrollo: si token == 'FAKE_GOOGLE_ID_TOKEN' y DEBUG, crear usuario dummy
     debug_mode = os.getenv('DEBUG', 'True').lower() in ('1', 'true', 'yes')
     if token == 'FAKE_GOOGLE_ID_TOKEN' and debug_mode:
         idinfo = { 'email': 'demo_google@example.com' }
     else:
         if not client_id:
             msg = 'GOOGLE_CLIENT_ID no configurado en backend'
-            # En debug, devolver 400 en lugar de 500 para claridad
             return Response({'detail': msg}, status=400 if debug_mode else 500)
         try:
             idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), audience=client_id)
-            # Validaciones adicionales recomendadas por Google
             iss = idinfo.get('iss')
             if iss not in ('accounts.google.com', 'https://accounts.google.com'):
                 return Response({'detail': 'Issuer inválido'}, status=400)
@@ -206,7 +194,6 @@ def google_oauth(request):
             if aud != client_id:
                 return Response({'detail': 'Audience mismatch'}, status=400)
         except Exception as e:
-            # En DEBUG exponemos el motivo para facilitar diagnóstico
             if debug_mode:
                 return Response({'detail': f'Token Google inválido: {str(e)}'}, status=400)
             return Response({'detail': 'Token Google inválido'}, status=400)
@@ -215,7 +202,6 @@ def google_oauth(request):
         return Response({'detail': 'Email Google no disponible'}, status=400)
     user = User.objects.filter(email=email).order_by('id').first()
     if not user:
-        # Primera vez: requerir selección de username en cliente
         suggested = email.split('@')[0]
         signer = TimestampSigner()
         pending = signer.sign(email)
@@ -251,12 +237,11 @@ def complete_username(request):
     signer = TimestampSigner()
     debug_mode = os.getenv('DEBUG', 'True').lower() in ('1', 'true', 'yes')
     try:
-        email = signer.unsign(pending, max_age=600)  # 10 minutos
+        email = signer.unsign(pending, max_age=600)
     except (BadSignature, SignatureExpired) as e:
         return Response({'detail': 'Token pendiente inválido o expirado'}, status=400)
     if User.objects.filter(username=username).exists():
         return Response({'detail': 'Nombre de usuario no disponible'}, status=400)
-    # Validar contraseña antes de crear
     try:
         validate_password(password)
     except Exception as e:
@@ -279,7 +264,6 @@ def password_reset_request(request):
     email = (request.data.get('email') or '').strip()
     if not email:
         return Response({'detail': 'Email requerido'}, status=400)
-    # Rate limiting simple: máximo 5 intentos por 15 minutos por email y por IP
     client_ip = request.META.get('REMOTE_ADDR', 'unknown')
     k_email = f'rl:pwdreset:email:{email}'
     k_ip = f'rl:pwdreset:ip:{client_ip}'
@@ -291,9 +275,7 @@ def password_reset_request(request):
     cache.set(k_ip, ip_count + 1, timeout=900)
     user = User.objects.filter(email=email).order_by('id').first()
     if not user:
-        # No revelar si el email existe por seguridad; responder OK
         return Response({'detail': 'reset_sent'}, status=200)
-    # Generar código de 6 dígitos y almacenarlo en cache por 15 minutos
     code = get_random_string(6, allowed_chars='0123456789')
     cache.set(f'password_reset:{email}', code, timeout=900)
     debug_mode = os.getenv('DEBUG', 'True').lower() in ('1', 'true', 'yes')
@@ -320,7 +302,6 @@ def password_reset_verify(request):
     new_password = request.data.get('new_password')
     if not email or not code or not new_password:
         return Response({'detail': 'Email, código y nueva contraseña requerados'}, status=400)
-    # Rate limiting verificación: 10 intentos por 15 minutos por email
     k_email_verify = f'rl:pwdverify:email:{email}'
     vcount = cache.get(k_email_verify, 0)
     if vcount >= 10:
@@ -334,7 +315,6 @@ def password_reset_verify(request):
     user = User.objects.filter(email=email).order_by('id').first()
     if not user:
         return Response({'detail': 'Usuario no encontrado'}, status=404)
-    # Validar la nueva contraseña
     try:
         validate_password(new_password, user=user)
     except Exception as e:
@@ -345,7 +325,6 @@ def password_reset_verify(request):
     return Response({'detail': 'password_reset_success'}, status=200)
 
 
-# --- SSO Admin redirect (Django -> Spring Boot) ---
 @login_required
 def admin_sso_redirect(request):
     """If the logged-in user is staff/superuser, mint a short-lived HMAC token
@@ -353,18 +332,16 @@ def admin_sso_redirect(request):
     Otherwise, redirect to home.
     """
     user = request.user
-    # Only allow admin users
     if not (user.is_staff or user.is_superuser):
         return redirect('/')
 
     shared = getattr(settings, 'SSO_SHARED_SECRET', '')
     spring_endpoint = getattr(settings, 'SPRING_ADMIN_SSO_ENDPOINT', 'http://localhost:8081/sso/login')
     if not shared:
-        # If not configured, just return to home for safety
         return redirect('/')
 
     now = int(time.time())
-    exp = now + 60  # must match Spring's sso.max-age
+    exp = now + 60
     payload = {
         'sub': str(user.id),
         'email': user.email or user.username,
@@ -373,14 +350,12 @@ def admin_sso_redirect(request):
         'exp': exp,
     }
     payload_bytes = json.dumps(payload, separators=(',', ':')).encode('utf-8')
-    # Sign the RAW JSON bytes (Spring verifies HMAC over decoded payload bytes)
     sig = hmac.new(shared.encode('utf-8'), payload_bytes, hashlib.sha256).hexdigest()
     payload_b64 = base64.urlsafe_b64encode(payload_bytes).rstrip(b'=')
     token = payload_b64.decode('utf-8') + '.' + sig
     return redirect(f"{spring_endpoint}?token={token}")
 
 
-# --- Profile & Emails Management ---
 
 def _send_email(subject, message, to_email, debug_fallback=True):
     debug_mode = os.getenv('DEBUG', 'True').lower() in ('1', 'true', 'yes')
@@ -395,7 +370,6 @@ def _send_email(subject, message, to_email, debug_fallback=True):
     except Exception as e:
         if not debug_mode and not debug_fallback:
             raise
-        # swallow in debug
 
 
 @api_view(['GET', 'PATCH'])
@@ -406,7 +380,6 @@ def profile(request):
     """
     user = request.user
     if request.method == 'GET':
-        # Fetch secondary emails
         with connection.cursor() as cursor:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS user_emails (
@@ -423,7 +396,6 @@ def profile(request):
             cursor.execute("SELECT email, is_verified, is_primary FROM user_emails WHERE user_id=%s ORDER BY is_primary DESC, id DESC", [user.id])
             rows = cursor.fetchall() or []
         emails = [{'email': r[0], 'is_verified': int(r[1])==1, 'is_primary': int(r[2])==1} for r in rows]
-        # Ensure primary email listed (from auth user)
         if user.email and not any(e['email'] == user.email for e in emails):
             emails.insert(0, {'email': user.email, 'is_verified': True, 'is_primary': True})
         return Response({
@@ -434,7 +406,6 @@ def profile(request):
             'last_name': user.last_name,
             'emails': emails,
         })
-    # PATCH
     data = request.data
     first_name = (data.get('first_name') or '').strip()
     last_name = (data.get('last_name') or '').strip()
@@ -494,18 +465,14 @@ def emails(request):
         except Exception:
             pass
         return Response({'detail': 'deleted'})
-    # POST add
     email = (request.data.get('email') or '').strip().lower()
     if not email:
         return Response({'detail': 'email requerido'}, status=400)
-    # Add or ensure row
     with connection.cursor() as cursor:
         try:
             cursor.execute("INSERT INTO user_emails (user_id, email, is_verified, is_primary) VALUES (%s, %s, 0, 0)", [user.id, email])
         except Exception:
-            # Already exists for this user; continue
             pass
-    # Send verification code and signed link to that email
     code = get_random_string(6, allowed_chars='0123456789')
     cache.set(f'email_verify:{user.id}:{email}', code, timeout=900)
     signer = TimestampSigner()
@@ -561,7 +528,6 @@ def emails_set_primary(request):
     if not email:
         return Response({'detail': 'email requerido'}, status=400)
     with connection.cursor() as cursor:
-        # Ensure exists and verified
         cursor.execute("SELECT is_verified FROM user_emails WHERE user_id=%s AND email=%s", [user.id, email])
         row = cursor.fetchone()
         if not row:
@@ -570,11 +536,9 @@ def emails_set_primary(request):
             return Response({'detail': 'Debes verificar este email antes de hacerlo principal'}, status=400)
         cursor.execute("UPDATE user_emails SET is_primary=0 WHERE user_id=%s", [user.id])
         cursor.execute("UPDATE user_emails SET is_primary=1 WHERE user_id=%s AND email=%s", [user.id, email])
-    # Update Django User primary email
     old_primary = user.email
     user.email = email
     user.save()
-    # notify primary change
     try:
         if old_primary:
             _send_email('Tu correo principal fue cambiado', f'Se cambió tu correo principal a {email}. Si no fuiste tú, contacta soporte.', old_primary)
@@ -624,7 +588,6 @@ def password_change_verify(request):
         return Response({'detail': 'Código expirado o no encontrado'}, status=400)
     if str(expected) != str(code):
         return Response({'detail': 'Código inválido'}, status=400)
-    # TOTP validation disabled per current requirements
     new_password = cache.get(f'pwd_change:{user.id}:new')
     if not new_password:
         return Response({'detail': 'Nueva contraseña expirada, solicita de nuevo'}, status=400)
@@ -635,13 +598,11 @@ def password_change_verify(request):
     return Response({'detail': 'password_changed'})
 
 
-# --- Security (2FA TOTP) & Sessions ---
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def security_totp_setup(request):
     user = request.user
-    # create table
     with connection.cursor() as cursor:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS user_security (
@@ -656,7 +617,6 @@ def security_totp_setup(request):
             cursor.execute("SELECT totp_enabled FROM user_security WHERE user_id=%s", [user.id])
             row = cursor.fetchone()
         return Response({'totp_enabled': bool(row and int(row[0])==1)})
-    # POST generate secret and store (pending)
     secret = pyotp.random_base32()
     with connection.cursor() as cursor:
         cursor.execute("INSERT INTO user_security (user_id, totp_secret, totp_enabled) VALUES (%s, %s, 0) ON DUPLICATE KEY UPDATE totp_secret=VALUES(totp_secret)", [user.id, secret])

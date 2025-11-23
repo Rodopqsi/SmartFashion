@@ -67,7 +67,7 @@ public class ProductController {
             return "products/form";
         }
 
-        // Validación simple: requerir talla y color para la primera variante
+        
         if (sizeId == null || colorId == null) {
             model.addAttribute("categories", categoryRepository.findAll());
             model.addAttribute("colors", colorRepository.findAll());
@@ -76,10 +76,10 @@ public class ProductController {
             return "products/form";
         }
 
-        // 1) Guardar producto base
+        
         Product saved = productRepository.save(product);
 
-        // 2) Crear variante inicial con stock, talla y color
+        
         ProductVariant v = new ProductVariant();
         v.setProduct(saved);
         v.setSize(sizeRepository.findById(sizeId).orElse(null));
@@ -87,7 +87,7 @@ public class ProductController {
         v.setStock(stock == null ? 0 : stock);
         variantRepository.save(v);
 
-        // 3) Crear al menos una imagen de variante usando el imagePreview como mínima
+        
         if (saved.getImagePreview() != null && !saved.getImagePreview().isBlank()) {
             ProductImage im = new ProductImage();
             im.setProduct(saved);
@@ -100,7 +100,7 @@ public class ProductController {
         return "redirect:/admin/products/" + saved.getId() + "/edit";
     }
 
-    // Edit page: variants + images by variant
+    
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable("id") Long id, Model model){
         java.util.Optional<Product> opt = productRepository.findById(id);
@@ -109,7 +109,7 @@ public class ProductController {
         }
         Product p = opt.get();
         model.addAttribute("product", p);
-        // Fetch related data with repository queries to avoid NPEs on orphan rows
+        
         model.addAttribute("variants", variantRepository.findByProduct_Id(id));
         model.addAttribute("images", imageRepository.findByProduct_Id(id));
         model.addAttribute("colors", colorRepository.findAll());
@@ -117,7 +117,7 @@ public class ProductController {
         return "products/edit";
     }
 
-    // Create variant
+    
     @PostMapping("/{id}/variants")
     public String addVariant(@PathVariable("id") Long id,
                              @RequestParam(name = "sizeId", required = false) Long sizeId,
@@ -136,14 +136,14 @@ public class ProductController {
         return "redirect:/admin/products/"+id+"/edit";
     }
 
-    // Delete variant
+    
     @PostMapping("/{id}/variants/{variantId}/delete")
     public String deleteVariant(@PathVariable("id") Long id, @PathVariable("variantId") Long variantId){
         variantRepository.deleteById(variantId);
         return "redirect:/admin/products/"+id+"/edit";
     }
 
-    // Add images by variant or by color/general (unified: URLs o archivos locales)
+    
     @PostMapping(path = "/{id}/images")
     public String addImages(@PathVariable("id") Long id,
                             @RequestParam(name = "sizeId", required = false) Long sizeId,
@@ -155,7 +155,7 @@ public class ProductController {
         Color c = (colorId != null ? colorRepository.findById(colorId).orElse(null) : null);
         boolean added = false;
 
-        // 1) URLs (si hay)
+        
         if (urls != null && !urls.isBlank()) {
             for (String u : urls.split("\n")){
                 String url = u.trim();
@@ -167,7 +167,7 @@ public class ProductController {
             }
         }
 
-        // 2) Archivos locales (si hay)
+        
         if (files != null && files.length > 0) {
             try {
                 java.nio.file.Path base = java.nio.file.Paths.get(uploadDir);
@@ -197,8 +197,8 @@ public class ProductController {
         return "redirect:/admin/products/"+id+"/edit";
     }
 
-    // (endpoint /{id}/images/upload queda obsoleto, mantenemos addImages unificado)
-    // Delete image
+    
+    
     @PostMapping("/{id}/images/{imageId}/delete")
     public String deleteImage(@PathVariable("id") Long id, @PathVariable("imageId") Long imageId){
         imageRepository.deleteById(imageId);

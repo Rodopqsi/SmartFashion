@@ -30,10 +30,10 @@ public class SupportController {
 
     @GetMapping("/claims")
     public String listClaims(Model model,
-                             @RequestParam(required = false) String estado,
-                             @RequestParam(required = false) String q,
-                             @RequestParam(required = false) String desde,
-                             @RequestParam(required = false) String hasta) {
+                             @RequestParam(value = "estado", required = false) String estado,
+                             @RequestParam(value = "q", required = false) String q,
+                             @RequestParam(value = "desde", required = false) String desde,
+                             @RequestParam(value = "hasta", required = false) String hasta) {
         Instant dDesde = parseStart(desde);
         Instant dHasta = parseEnd(hasta);
         List<Reclamacion> claims = reclamoRepo.search(emptyToNull(estado), emptyToNull(q), dDesde, dHasta);
@@ -56,8 +56,8 @@ public class SupportController {
 
     @PostMapping("/claims/{id}")
     public String updateClaim(@PathVariable Long id,
-                              @RequestParam(required = false) String estado,
-                              @RequestParam(required = false) String respuesta) {
+                              @RequestParam(value = "estado", required = false) String estado,
+                              @RequestParam(value = "respuesta", required = false) String respuesta) {
         Reclamacion c = reclamoRepo.findById(id).orElse(null);
         if (c != null) {
             boolean changed = false;
@@ -71,10 +71,10 @@ public class SupportController {
 
     @GetMapping("/returns")
     public String listReturns(Model model,
-                              @RequestParam(required = false) String estado,
-                              @RequestParam(required = false) String q,
-                              @RequestParam(required = false) String desde,
-                              @RequestParam(required = false) String hasta) {
+                              @RequestParam(value = "estado", required = false) String estado,
+                              @RequestParam(value = "q", required = false) String q,
+                              @RequestParam(value = "desde", required = false) String desde,
+                              @RequestParam(value = "hasta", required = false) String hasta) {
         Instant dDesde = parseStart(desde);
         Instant dHasta = parseEnd(hasta);
         List<Devolucion> returnsList = devolucionRepo.search(emptyToNull(estado), emptyToNull(q), dDesde, dHasta);
@@ -97,7 +97,7 @@ public class SupportController {
 
     @PostMapping("/returns/{id}")
     public String updateReturn(@PathVariable Long id,
-                               @RequestParam(required = false) String estado) {
+                               @RequestParam(value = "estado", required = false) String estado) {
         Devolucion d = devolucionRepo.findById(id).orElse(null);
         if (d != null && StringUtils.hasText(estado)) {
             boolean changed = !estado.equals(d.getEstado());

@@ -15,11 +15,11 @@ public class ProductImage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_talla")
-    private Size size; // opcional
+    private Size size; 
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_color")
-    private Color color; // opcional
+    private Color color; 
 
     @Column(nullable = false, length = 1024)
     private String url;

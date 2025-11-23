@@ -10,11 +10,11 @@ public class DashboardController {
 
     @GetMapping({"/", "/admin"})
     public String dashboard(Model model) {
-        // Redirige siempre al listado de productos como home del panel
+        
         return "redirect:/admin/products";
     }
 
-    // Endpoint de diagnóstico: requiere rol ADMIN y evita plantillas
+    
     @GetMapping("/admin/plain")
     @ResponseBody
     public String adminPlain() {
@@ -23,6 +23,6 @@ public class DashboardController {
 
     @GetMapping("/login")
     public String login() {
-        return "login"; // optionally add a custom login template later
+        return "login"; 
     }
 }

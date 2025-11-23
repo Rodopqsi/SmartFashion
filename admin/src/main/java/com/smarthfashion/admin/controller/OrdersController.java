@@ -3,6 +3,7 @@ package com.smarthfashion.admin.controller;
 import com.smarthfashion.admin.domain.OrderStatus;
 import com.smarthfashion.admin.domain.Orders;
 import com.smarthfashion.admin.repository.OrderItemRepository;
+import com.smarthfashion.admin.service.EmailService;
 import com.smarthfashion.admin.repository.OrdersRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.domain.Page;
@@ -31,10 +32,12 @@ import java.util.Locale;
 public class OrdersController {
     private final OrdersRepository ordersRepo;
     private final OrderItemRepository itemRepo;
+    private final EmailService emailService;
 
-    public OrdersController(OrdersRepository ordersRepo, OrderItemRepository itemRepo) {
+    public OrdersController(OrdersRepository ordersRepo, OrderItemRepository itemRepo, EmailService emailService) {
         this.ordersRepo = ordersRepo;
         this.itemRepo = itemRepo;
+        this.emailService = emailService;
     }
 
     @GetMapping
@@ -146,6 +149,8 @@ public class OrdersController {
         return ordersRepo.findById(id).map(o -> {
             o.setStatus(status);
             ordersRepo.save(o);
+            
+            try { emailService.sendOrderStatusEmail(o); } catch (Exception ignore) {}
             return "redirect:/admin/orders/" + id;
         }).orElse("redirect:/admin/orders");
     }
@@ -155,6 +160,7 @@ public class OrdersController {
         return ordersRepo.findById(orderId).map(o -> {
             o.setStatus(OrderStatus.CANCELADO);
             ordersRepo.save(o);
+            try { emailService.sendOrderStatusEmail(o); } catch (Exception ignore) {}
             return "redirect:/admin/orders/" + orderId;
         }).orElse("redirect:/admin/orders");
     }
@@ -165,7 +171,7 @@ public class OrdersController {
         if (orderOpt.isEmpty()) return "redirect:/admin/orders";
         var order = orderOpt.get();
         itemRepo.deleteById(itemId);
-        // Recalculate totals
+        
         var items = itemRepo.findByOrder_Id(orderId);
         java.math.BigDecimal subtotal = java.math.BigDecimal.ZERO;
         for (var it : items){

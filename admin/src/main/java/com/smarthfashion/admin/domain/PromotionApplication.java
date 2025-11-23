@@ -14,11 +14,11 @@ public class PromotionApplication {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_producto")
-    private Product producto; // opcional
+    private Product producto; 
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_categoria")
-    private Category categoria; // opcional
+    private Category categoria; 
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

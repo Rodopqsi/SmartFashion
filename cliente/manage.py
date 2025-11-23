@@ -20,7 +20,6 @@ if not BACKEND_MANAGE.exists():
     sys.stderr.write("No se encontró backend/manage.py.\n")
     sys.exit(1)
 
-# Ajustar cwd para que Django lo tome igual que antes
 os.chdir(BACKEND_MANAGE.parent)
 sys.path.insert(0, str(BACKEND_MANAGE.parent))
 

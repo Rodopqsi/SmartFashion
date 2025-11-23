@@ -17,19 +17,22 @@ public class ShipmentController {
     private final ShippingRuleRepository ruleRepo;
     private final ShippingCompanyRepository companyRepo;
     private final OrdersRepository ordersRepo;
+    private final com.smarthfashion.admin.service.EmailService emailService;
 
     public ShipmentController(ShipmentRepository shipmentRepo,
                               ShipmentEventRepository eventRepo,
                               DistributionCenterRepository centerRepo,
                               ShippingRuleRepository ruleRepo,
                               ShippingCompanyRepository companyRepo,
-                              OrdersRepository ordersRepo) {
+                              OrdersRepository ordersRepo,
+                              com.smarthfashion.admin.service.EmailService emailService) {
         this.shipmentRepo = shipmentRepo;
         this.eventRepo = eventRepo;
         this.centerRepo = centerRepo;
         this.ruleRepo = ruleRepo;
         this.companyRepo = companyRepo;
         this.ordersRepo = ordersRepo;
+        this.emailService = emailService;
     }
 
     @GetMapping
@@ -54,7 +57,7 @@ public class ShipmentController {
 
     @PostMapping
     public String create(@ModelAttribute Shipment shipment) {
-        // Auto-asignación de empresa según reglas (origen = región del centro, destino = regiónDestino)
+        
         DistributionCenter center = centerRepo.findById(shipment.getCentroDistribucion().getId()).orElse(null);
         if (center != null) {
             List<ShippingRule> rules = ruleRepo.findByOrigenRegionIgnoreCaseAndDestinoRegionIgnoreCaseOrderByPrioridadAsc(center.getRegion(), shipment.getRegionDestino());
@@ -64,7 +67,7 @@ public class ShipmentController {
                 shipment.setCostoEnvio(r.getCosto());
                 shipment.setStatus(ShipmentStatus.ASIGNADO);
             } else {
-                // Fallback: primera empresa activa por cobertura o cualquiera
+                
                 List<ShippingCompany> candidates = companyRepo.findByCoberturaIgnoreCase(shipment.getRegionDestino());
                 if (candidates.isEmpty()) candidates = companyRepo.findByActivoTrueOrderByNombreAsc();
                 if (!candidates.isEmpty()) {
@@ -75,7 +78,7 @@ public class ShipmentController {
             }
         }
         Shipment saved = shipmentRepo.save(shipment);
-        // Primer evento
+        
         ShipmentEvent ev = new ShipmentEvent();
         ev.setEnvio(saved);
         ev.setStatus(saved.getStatus());
@@ -109,6 +112,14 @@ public class ShipmentController {
         ev.setStatus(status);
         ev.setNota(nota == null ? "Estado actualizado" : nota);
         eventRepo.save(ev);
+        
+        try {
+            if (s.getOrderId() != null) {
+                ordersRepo.findByOrderNumber(s.getOrderId()).ifPresent(o -> {
+                    try { emailService.sendOrderStatusEmail(o); } catch (Exception ignore) {}
+                });
+            }
+        } catch (Exception ignore) {}
         return "redirect:/admin/shipments/" + id;
     }
 

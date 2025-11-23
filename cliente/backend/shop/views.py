@@ -60,7 +60,6 @@ def address_set_default(request):
     if not nombre or not direccion or not region:
         return Response({'status': 'invalid', 'message': 'nombre, direccion y region son requeridos'}, status=status.HTTP_400_BAD_REQUEST)
     with connection.cursor() as cursor:
-        # Ensure only one default per email
         cursor.execute("UPDATE user_address SET is_default=0 WHERE user_email=%s", [email])
         cursor.execute(
             """
@@ -105,7 +104,6 @@ def addresses(request):
         ]
         return Response({'status': 'ok', 'data': data})
 
-    # POST create
     body = request.data
     required = ['nombre', 'direccion', 'region']
     if any(not body.get(k) for k in required):
@@ -163,7 +161,6 @@ def address_detail(request, addr_id: int):
 
     if request.method in ['PUT', 'PATCH']:
         body = request.data
-        # Only update provided keys
         editable = [
             'label', 'nombre', 'telefono', 'alt_telefono', 'direccion', 'direccion_linea2',
             'distrito', 'ciudad', 'region', 'estado', 'pais', 'codigo_postal', 'referencia'
@@ -183,7 +180,6 @@ def address_detail(request, addr_id: int):
             )
         return Response({'status': 'ok'})
 
-    # DELETE
     with connection.cursor() as cursor:
         cursor.execute("DELETE FROM user_address WHERE id=%s AND user_email=%s", [addr_id, email])
     return Response({'status': 'ok'})
@@ -202,17 +198,15 @@ def address_mark_default(request, addr_id: int):
 
 @api_view(['GET'])
 def home(request):
-    # Categorías siempre
     with connection.cursor() as cursor:
         cursor.execute("SELECT id, nombre FROM Categorias ORDER BY nombre ASC")
         rows = cursor.fetchall()
         categories = [{'id': r[0], 'nombre': r[1]} for r in rows]
 
-    # Filtros
     category_id = request.GET.get('category_id')
     q = request.GET.get('q')
-    size_id = request.GET.get('size')  # id_talla
-    color_id = request.GET.get('color')  # id_color
+    size_id = request.GET.get('size')
+    color_id = request.GET.get('color')
 
     filters = []
     params = []
@@ -220,7 +214,6 @@ def home(request):
         filters.append('p.id_categoria = %s')
         params.append(int(category_id))
     if q:
-        # Buscar en nombre o descripcion
         filters.append('(p.nombre LIKE %s OR p.descripcion LIKE %s)')
         like = f"%{q}%"
         params.extend([like, like])
@@ -235,7 +228,6 @@ def home(request):
     if filters:
         where_clause = 'WHERE ' + ' AND '.join(filters)
 
-    # Paginación (?page=&limit=)
     limit = request.GET.get('limit')
     page = request.GET.get('page')
     try:
@@ -248,7 +240,6 @@ def home(request):
         page_v = 1
     offset_v = (page_v - 1) * limit_v
 
-    # Total productos para paginación
     count_query = f"""
         SELECT COUNT(DISTINCT p.id)
         FROM Producto p
@@ -260,7 +251,6 @@ def home(request):
         total_count_row = cursor.fetchone()
     total_count = int(total_count_row[0] if total_count_row else 0)
 
-    # Data página actual
     data_query = f"""
         SELECT p.id, p.nombre, p.descripcion, p.precio, c.id AS categoria_id, c.nombre AS categoria_nombre, p.image_preview,
                COALESCE(SUM(v.stock), 0) AS stock_total
@@ -289,7 +279,6 @@ def home(request):
             'stock_total': int(r[7] or 0),
         })
 
-    # Collections (home merchandising): active, ordered, each with a few products
     collections = []
     with connection.cursor() as cursor:
         cursor.execute(
@@ -304,7 +293,6 @@ def home(request):
         col_rows = cursor.fetchall()
     for col in col_rows:
         col_id, col_nombre, col_slug, col_desc, col_image, col_orden = col
-        # Fetch up to N products for this collection
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -383,7 +371,6 @@ def colors(request):
 @api_view(['GET'])
 def product_detail(request, pk: int):
     """Return a single product with images, variants summary and related products (basic)."""
-    # Product core info
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -413,12 +400,10 @@ def product_detail(request, pk: int):
         'stock_total': int(row[7] or 0),
     }
 
-    # Images (optionally grouped by color and/or size)
     images = []
     images_by_color = {}
-    images_by_variant = {}  # key: f"{size_id}-{color_id}"
+    images_by_variant = {}
     try:
-        # Try to read optional id_talla (size) if schema supports it
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -439,7 +424,6 @@ def product_detail(request, pk: int):
                 key = f"{sid}-{cid}"
                 images_by_variant.setdefault(key, []).append(url)
     except Exception:
-        # Fallback for old schema without id_talla
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -457,7 +441,6 @@ def product_detail(request, pk: int):
                 continue
             images_by_color.setdefault(str(cid), []).append(url)
 
-    # Variants summary (sizes/colors available + stock)
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -474,7 +457,6 @@ def product_detail(request, pk: int):
         for r in vars_rows
     ]
 
-    # Related products (same category, simple)
     related = []
     if product.get('categoria') and product['categoria'].get('id') is not None:
         with connection.cursor() as cursor:
@@ -518,7 +500,6 @@ def product_reviews(request, pk: int):
     If table doesn't exist, returns a clear error and the client can fallback.
     """
     if request.method == 'POST':
-        # Require authentication (DRF should attach user if JWT/session configured)
         user = getattr(request, 'user', None)
         if not getattr(user, 'is_authenticated', False):
             return Response({'status': 'unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -541,12 +522,10 @@ def product_reviews(request, pk: int):
                     [pk, email, rating_v, text]
                 )
         except Exception as e:
-            # Likely table missing
             return Response({'status': 'not_supported', 'message': 'Tabla product_reviews no existe', 'detail': str(e)}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
         return Response({'status': 'ok'})
 
-    # GET
     try:
         with connection.cursor() as cursor:
             cursor.execute(
@@ -572,7 +551,6 @@ def product_reviews(request, pk: int):
         ]
         return Response({'status': 'ok', 'data': data})
     except Exception as e:
-        # Table missing: return a default sample
         sample = [
             {'id': 1, 'user': 'Ana', 'rating': 5, 'text': 'Excelente calidad y queda perfecto.'},
             {'id': 2, 'user': 'María', 'rating': 4, 'text': 'Los acabados están muy bien, llegó rápido.'},
@@ -605,7 +583,6 @@ def checkout_preview(request):
             return Response({'status': 'invalid', 'message': f'producto {pid} no existe'}, status=status.HTTP_400_BAD_REQUEST)
         name, price, image = prow[0], float(prow[1] or 0), prow[2]
 
-        # validate stock by variant when provided
         stock_ok = True
         if size_id is not None or color_id is not None:
             with connection.cursor() as cursor:
@@ -652,7 +629,6 @@ def checkout_confirm(request):
     try:
         with transaction.atomic():
             subtotal = 0.0
-            # map of product_id -> price to reuse
             price_cache = {}
             for it in items:
                 pid = int(it.get('product_id'))
@@ -660,7 +636,6 @@ def checkout_confirm(request):
                 size_id = it.get('size_id')
                 color_id = it.get('color_id')
 
-                # Check current stock
                 with connection.cursor() as cursor:
                     cursor.execute(
                         """
@@ -675,7 +650,6 @@ def checkout_confirm(request):
                 if stock < qty:
                     return Response({'status': 'insufficient_stock', 'product_id': pid, 'available': stock}, status=status.HTTP_409_CONFLICT)
 
-                # Decrement
                 with connection.cursor() as cursor:
                     cursor.execute(
                         """
@@ -687,7 +661,6 @@ def checkout_confirm(request):
                         [qty, pid, size_id, size_id, color_id, color_id]
                     )
 
-                # Obtain product price and accumulate subtotal
                 if pid not in price_cache:
                     with connection.cursor() as cursor:
                         cursor.execute("SELECT precio, nombre, image_preview FROM Producto WHERE id=%s", [pid])
@@ -700,7 +673,6 @@ def checkout_confirm(request):
                 line_amount = price_cache[pid]['price'] * qty
                 subtotal += line_amount
 
-            # Try to persist order if tables exist
             igv = subtotal * 0.18
             total = subtotal + igv
             order_number = request.data.get('order_number') or None
@@ -718,7 +690,6 @@ def checkout_confirm(request):
                     if order_number is None:
                         cursor.execute("SELECT order_number FROM orders WHERE id=%s", [order_id])
                         order_number = cursor.fetchone()[0]
-                # Insert items
                 with connection.cursor() as cursor:
                     for it in items:
                         pid = int(it.get('product_id'))
@@ -734,11 +705,8 @@ def checkout_confirm(request):
                             [order_id, pid, size_id, color_id, qty, meta['price'], meta['price']*qty, meta['name'], meta['image']]
                         )
             except Exception:
-                # Tables may not exist; continue without persistence
                 import time
                 order_number = order_number or f"SF{int(time.time())}"
-        # Determine shipping info: default address if not provided in payload
-        # Determine shipping address selection priority: address_id -> payload -> default
         destinatario = request.data.get('destinatario') or request.data.get('nombre')
         telefono_envio = None
         shipping_address = None
@@ -790,7 +758,6 @@ def checkout_confirm(request):
             shipping_region = shipping_region or row[2]
             telefono_envio = telefono_envio or row[3]
 
-        # Fire-and-forget webhook to Admin to create shipment and tracking
         tracking_url = None
         webhook_status = None
         try:
@@ -815,8 +782,24 @@ def checkout_confirm(request):
             if r.ok:
                 j = r.json()
                 tracking_url = j.get('trackingUrl')
+            else:
+                try:
+                    from django.db import connection as _conn
+                    with _conn.cursor() as _c:
+                        _c.execute("SELECT id FROM CentroDistribucion LIMIT 1")
+                        _r = _c.fetchone()
+                        if _r:
+                            center_id = _r[0]
+                            _c.execute(
+                                """
+                                INSERT INTO Envio (order_id, id_centro_distribucion, destinatario, direccion, region_destino, email_destino, telefono_destino, status, creado_en)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                                """,
+                                [order_number, center_id, destinatario, shipping_address, shipping_region, user_email, telefono_envio, 'CREADO']
+                            )
+                except Exception:
+                    pass
         except Exception as e:
-            # Do not fail checkout on webhook issues
             webhook_status = f"error: {e}"
 
         return Response({'status': 'ok', 'order_number': order_number, 'tracking_url': tracking_url, 'webhook_status': webhook_status})
@@ -824,14 +807,13 @@ def checkout_confirm(request):
         return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# --- Payments: Stripe Checkout ---
 @api_view(['POST'])
 def payments_create_session(request):
     """Create a Stripe Checkout Session and return the hosted page URL.
     Body: { items:[{product_id, size_id?, color_id?, qty}], address_id?, userEmail? }
     """
     try:
-        import stripe  # type: ignore
+        import stripe
     except Exception:
         return Response({'status': 'error', 'message': 'stripe no instalado en el backend'}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
@@ -842,8 +824,6 @@ def payments_create_session(request):
     email = _get_user_email(request)
     address_id = request.data.get('address_id')
 
-    # Reuse preview calculation to validate and price items server-side
-    # Build a fresh DRF request with the same payload to avoid Request/HttpRequest mismatch
     from rest_framework.test import APIRequestFactory
     factory = APIRequestFactory()
     preview_req = factory.post('/api/checkout/preview/', {
@@ -851,7 +831,6 @@ def payments_create_session(request):
         'address_id': address_id,
         'userEmail': email,
     }, format='json')
-    # Preserve auth/user if present
     try:
         preview_req.user = getattr(request, 'user', None)
     except Exception:
@@ -913,7 +892,7 @@ def payments_webhook(request):
     Requires STRIPE_WEBHOOK_SECRET env var.
     """
     try:
-        import stripe  # type: ignore
+        import stripe
     except Exception:
         return Response(status=200)
 
@@ -940,7 +919,6 @@ def payments_webhook(request):
         email = metadata.get('email') or None
         order_number = metadata.get('order_number') or None
 
-        # Usar DRF para crear el pedido
         from rest_framework.test import APIRequestFactory
         factory = APIRequestFactory()
         req = factory.post('/api/checkout/confirm/', {
@@ -954,9 +932,7 @@ def payments_webhook(request):
         except Exception:
             resp = None
 
-        # Notificar al admin si el pedido se creó correctamente
         try:
-            # Extraer datos necesarios para el webhook (intenta dirección por id o default)
             user_email = email
             destinatario = None
             telefono_envio = None
@@ -1004,7 +980,6 @@ def payments_webhook(request):
                         telefono_envio = telefono_envio or row[3]
 
             except Exception:
-                # No bloqueamos por errores de lectura de dirección
                 pass
 
             admin_url = os.getenv('ADMIN_URL', 'http://localhost:8081')
@@ -1023,7 +998,6 @@ def payments_webhook(request):
             if webhook_secret:
                 headers['X-Webhook-Token'] = webhook_secret
 
-            # Registro diagnóstico en archivo para depuración local
             try:
                 log_path = os.path.join(os.path.dirname(__file__), 'webhook_debug.log')
                 with open(log_path, 'a', encoding='utf-8') as lf:
@@ -1037,7 +1011,6 @@ def payments_webhook(request):
 
             try:
                 r = requests.post(f"{admin_url}/api/internal/orders", json=payload, headers=headers, timeout=6)
-                # append response to log
                 try:
                     with open(log_path, 'a', encoding='utf-8') as lf:
                         lf.write(f"response_status={getattr(r, 'status_code', 'n/a')}\n")
@@ -1045,6 +1018,23 @@ def payments_webhook(request):
                             lf.write(f"response_text={r.text}\n")
                         except Exception:
                             lf.write("response_text=<could not read>\n")
+                except Exception:
+                    pass
+                try:
+                    if not getattr(r, 'ok', False):
+                        from django.db import connection as _conn2
+                        with _conn2.cursor() as _c2:
+                            _c2.execute("SELECT id FROM CentroDistribucion LIMIT 1")
+                            _rr = _c2.fetchone()
+                            if _rr:
+                                cid = _rr[0]
+                                _c2.execute(
+                                    """
+                                    INSERT INTO Envio (order_id, id_centro_distribucion, destinatario, direccion, region_destino, email_destino, telefono_destino, status, creado_en)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                                    """,
+                                    [order_number, cid, payload.get('destinatario'), payload.get('direccion'), payload.get('regionDestino'), payload.get('email'), payload.get('telefono'), 'CREADO']
+                                )
                 except Exception:
                     pass
             except Exception as e:
@@ -1087,7 +1077,6 @@ def _build_catalog_context_for_ai(snap: dict) -> str:
         cname = (p.get('categoria') or {}).get('nombre') or ''
         price = p.get('precio')
         stock = p.get('stock_total')
-        # aggregate variant color/size names
         vcolors, vsizes = set(), set()
         for v in (p.get('variantes') or []):
             if v.get('color_id') is not None:
@@ -1116,7 +1105,7 @@ def chat_ai(request):
         return Response({'status': 'not_configured', 'message': 'GEMINI_API_KEY no configurado en backend'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     try:
-        import google.generativeai as genai  # type: ignore
+        import google.generativeai as genai
     except Exception:
         return Response({'status': 'error', 'message': 'google-generativeai no instalado'}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
@@ -1154,9 +1143,8 @@ def chat_ai(request):
         resp = model.generate_content(prompt)
         text = getattr(resp, 'text', None)
         if not text:
-            # Fallback extraction
             try:
-                text = resp.candidates[0].content.parts[0].text  # type: ignore
+                text = resp.candidates[0].content.parts[0].text
             except Exception:
                 text = ''
         if not text:
@@ -1175,7 +1163,7 @@ def chat_ai_status(request):
     if not api_key:
         return Response({'status': 'not_configured', 'message': 'GEMINI_API_KEY no configurado'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     try:
-        import google.generativeai as genai  # type: ignore
+        import google.generativeai as genai
     except Exception:
         return Response({'status': 'error', 'message': 'google-generativeai no instalado'}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
@@ -1205,7 +1193,6 @@ def collection_detail(request, slug: str):
     """Return a collection by slug with products limited to that collection and in-collection filters.
     Query params: size=<id>, color=<id>, min_price, max_price, q, page, limit
     """
-    # Resolve collection by slug
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -1223,7 +1210,6 @@ def collection_detail(request, slug: str):
         'id': row[0], 'nombre': row[1], 'slug': row[2], 'descripcion': row[3], 'image_url': row[4], 'orden': int(row[5] or 0)
     }
 
-    # Filters
     size_id = request.GET.get('size')
     color_id = request.GET.get('color')
     q = request.GET.get('q')
@@ -1259,7 +1245,6 @@ def collection_detail(request, slug: str):
 
     where_clause = ' AND '.join(filters)
 
-    # Pagination
     limit = request.GET.get('limit')
     page = request.GET.get('page')
     try:
@@ -1272,7 +1257,6 @@ def collection_detail(request, slug: str):
         page_v = 1
     offset_v = (page_v - 1) * limit_v
 
-    # Total count (optional)
     with connection.cursor() as cursor:
         cursor.execute(
             f"""
@@ -1286,7 +1270,6 @@ def collection_detail(request, slug: str):
         )
         total = cursor.fetchone()[0]
 
-    # Data query
     with connection.cursor() as cursor:
         cursor.execute(
             f"""
@@ -1316,7 +1299,6 @@ def collection_detail(request, slug: str):
         for r in rows
     ]
 
-    # Available filters within collection
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -1377,7 +1359,7 @@ def claims(request):
     if request.method == 'POST':
         body = request.data
         order_number = body.get('order_number')
-        tipo = (body.get('tipo') or '').lower()  # queja | reclamo
+        tipo = (body.get('tipo') or '').lower()
         detalle = body.get('detalle')
         telefono = body.get('telefono')
         if not order_number or tipo not in ['queja', 'reclamo'] or not detalle:
@@ -1388,7 +1370,6 @@ def claims(request):
             tipo=tipo,
             detalle=detalle,
         )
-        # Notify Admin via webhook (fire-and-forget)
         try:
             admin_url = os.getenv('ADMIN_URL', 'http://localhost:8081')
             webhook_secret = os.getenv('WEBHOOK_SECRET', '')
@@ -1408,7 +1389,6 @@ def claims(request):
             pass
         return Response({'status': 'ok', 'id': comp.id}, status=status.HTTP_201_CREATED)
 
-    # GET list
     qs = Complaint.objects.filter(user_email=email).order_by('-id')[:100]
     data = [
         {
@@ -1457,9 +1437,9 @@ def returns(request):
     if request.method == 'POST':
         body = request.data
         order_number = body.get('order_number')
-        motivo = (body.get('motivo') or '').lower()  # talla_incorrecta|defectuoso|no_satisfecho|otro
+        motivo = (body.get('motivo') or '').lower()
         descripcion = body.get('descripcion')
-        metodo = (body.get('metodo') or '').lower()  # cambio|reembolso
+        metodo = (body.get('metodo') or '').lower()
         telefono = body.get('telefono')
         valid_motivos = ['talla_incorrecta', 'defectuoso', 'no_satisfecho', 'otro']
         valid_metodos = ['cambio', 'reembolso']
@@ -1472,7 +1452,6 @@ def returns(request):
             descripcion=descripcion,
             metodo=metodo,
         )
-        # Notify Admin via webhook
         try:
             admin_url = os.getenv('ADMIN_URL', 'http://localhost:8081')
             webhook_secret = os.getenv('WEBHOOK_SECRET', '')
@@ -1493,7 +1472,6 @@ def returns(request):
             pass
         return Response({'status': 'ok', 'id': rr.id}, status=status.HTTP_201_CREATED)
 
-    # GET list
     qs = ReturnRequest.objects.filter(user_email=email).order_by('-id')[:100]
     data = [
         {

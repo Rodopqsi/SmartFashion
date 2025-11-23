@@ -88,7 +88,6 @@ class Command(BaseCommand):
         if g1.status_code == 202 and g1b.get('need_username'):
             pend = g1b.get('pending')
             sug = g1b.get('suggested_username') or f'google_{ts}'
-            # Asegurar username válido
             sug = re.sub(r'[^a-zA-Z0-9_\.-]', '_', sug)[:20]
             g2 = c.post('/api/auth/google/complete/', {
                 'username': sug,

@@ -87,9 +87,9 @@ class Complaint(models.Model):
     id = models.BigAutoField(primary_key=True)
     user_email = models.CharField(max_length=255)
     order_number = models.CharField(max_length=64)
-    tipo = models.CharField(max_length=16)  # queja | reclamo
+    tipo = models.CharField(max_length=16)
     detalle = models.TextField()
-    estado = models.CharField(max_length=32, default='registrado')  # registrado | en_proceso | resuelto | rechazado
+    estado = models.CharField(max_length=32, default='registrado')
     respuesta = models.TextField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -102,10 +102,10 @@ class ReturnRequest(models.Model):
     id = models.BigAutoField(primary_key=True)
     user_email = models.CharField(max_length=255)
     order_number = models.CharField(max_length=64)
-    motivo = models.CharField(max_length=64)  # talla_incorrecta | defectuoso | no_satisfecho | otro
+    motivo = models.CharField(max_length=64)
     descripcion = models.TextField(null=True)
-    metodo = models.CharField(max_length=16)  # cambio | reembolso
-    estado = models.CharField(max_length=32, default='solicitado')  # solicitado | aprobado | rechazado | recibido | reembolsado | completado
+    metodo = models.CharField(max_length=16)
+    estado = models.CharField(max_length=32, default='solicitado')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -113,7 +113,6 @@ class ReturnRequest(models.Model):
         db_table = 'return_requests'
 
 
-# Colecciones (para home): mapean tablas existentes creadas por Admin. No gestionadas por Django.
 class Coleccion(models.Model):
     id = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=255)

@@ -23,7 +23,6 @@ def _regenerate():
     try:
         export_snapshot()
     except Exception:
-        # Silent fail; snapshot will regenerate next change or via command
         pass
 
 

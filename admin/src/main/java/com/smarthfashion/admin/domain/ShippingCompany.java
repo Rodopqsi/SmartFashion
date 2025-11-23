@@ -12,15 +12,15 @@ public class ShippingCompany {
     @Column(nullable = false, unique = true)
     private String nombre;
 
-    // Región/cobertura principal (ej: "Lima", "Nacional", "Internacional")
+    
     @Column(nullable = false)
     private String cobertura;
 
-    // Campo opcional para URL de tracking externo
+    
     @Column(name = "tracking_url_base")
     private String trackingUrlBase;
 
-    // Activo/inactivo para asignación automática
+    
     @Column(nullable = false)
     private boolean activo = true;
 

@@ -6,8 +6,7 @@ class ShopConfig(AppConfig):
     name = 'shop'
 
     def ready(self):
-        # Import signals to activate snapshot auto-generation
         try:
-            from . import signals  # noqa: F401
+            from . import signals
         except Exception:
             pass

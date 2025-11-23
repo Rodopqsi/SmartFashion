@@ -17,7 +17,7 @@ public class Promotion {
     private String nombre;
 
     @Column(name = "tipo_descuento", nullable = false)
-    private String tipoDescuento; // PORCENTAJE | MONTO_FIJO
+    private String tipoDescuento; 
 
     @Column(nullable = false, precision = 8, scale = 2)
     private BigDecimal valor;
@@ -29,7 +29,7 @@ public class Promotion {
     private LocalDateTime fechaFin;
 
     @Column(nullable = false)
-    private Long activo = 1L; // 1/0 en DB
+    private Long activo = 1L; 
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

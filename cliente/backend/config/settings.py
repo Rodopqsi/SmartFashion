@@ -98,7 +98,6 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# Email configuration (real sending)
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', '')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
@@ -108,15 +107,10 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('1','true','yes')
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() in ('1','true','yes')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'no-reply@smarthfashion.local')
 
-# Relax COOP/COEP in development to avoid blocking Vite HMR and postMessage
 if DEBUG:
     SECURE_CROSS_ORIGIN_OPENER_POLICY = None
     SECURE_CROSS_ORIGIN_EMBEDDER_POLICY = None
 
-# --- SSO Admin -> Spring Boot ---
-# Shared HMAC secret used to mint tokens in Django and verify in Spring
 SSO_SHARED_SECRET = os.getenv('SSO_SHARED_SECRET', '')
-# Spring endpoint that accepts the token and creates the ADMIN session
 SPRING_ADMIN_SSO_ENDPOINT = os.getenv('SPRING_ADMIN_SSO_ENDPOINT', 'http://localhost:8081/sso/login')
-# Login URL to require before issuing the SSO token (defaults to Django Admin login)
 LOGIN_URL = os.getenv('DJANGO_LOGIN_URL', '/admin/login/')

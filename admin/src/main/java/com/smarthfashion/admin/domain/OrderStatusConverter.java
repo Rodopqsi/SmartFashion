@@ -20,16 +20,16 @@ public class OrderStatusConverter implements AttributeConverter<OrderStatus, Str
         try {
             return OrderStatus.valueOf(normalized);
         } catch (IllegalArgumentException ex) {
-            // If the database holds an unknown/legacy value, return null to avoid breaking reads
+            
             return null;
         }
     }
 
     private static String normalize(String in) {
         String s = in.trim();
-        // Remove accents
+        
         s = Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
-        // Upper-case and replace spaces/hyphens with underscore
+        
         s = s.toUpperCase(Locale.ROOT).replace(' ', '_').replace('-', '_');
         return s;
     }

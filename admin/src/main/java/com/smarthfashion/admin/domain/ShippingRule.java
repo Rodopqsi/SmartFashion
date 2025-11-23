@@ -10,11 +10,11 @@ public class ShippingRule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Región origen (centro de distribución)
+    
     @Column(name = "origen_region", nullable = false)
     private String origenRegion;
 
-    // Región destino (usuario)
+    
     @Column(name = "destino_region", nullable = false)
     private String destinoRegion;
 
@@ -22,7 +22,7 @@ public class ShippingRule {
     @JoinColumn(name = "id_empresa_envio")
     private ShippingCompany empresaEnvio;
 
-    // Menor número = mayor prioridad
+    
     @Column(nullable = false)
     private int prioridad = 1;
 

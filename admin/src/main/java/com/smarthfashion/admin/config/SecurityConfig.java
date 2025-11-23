@@ -11,11 +11,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 public class SecurityConfig {
 
-    // Local fixed credentials for development: admin/admin123 with ROLE_ADMIN
+    
     @Bean
     public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
         UserDetails admin = User
@@ -36,10 +37,12 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/css/**", "/login", "/error", "/sso/login", "/ping", "/tracking/**").permitAll()
+                
+                .requestMatchers("/api/internal/**").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
-            // Enable local form login using our Thymeleaf login page at /login
+            
             .formLogin(login -> login
                 .loginPage("/login")
                 .defaultSuccessUrl("/admin/products", true)
@@ -50,7 +53,7 @@ public class SecurityConfig {
                 .logoutSuccessUrl("/login?logout")
                 .permitAll()
             )
-            .csrf(Customizer.withDefaults());
+            .csrf(csrf -> csrf.ignoringRequestMatchers(new AntPathRequestMatcher("/api/internal/**")));
         return http.build();
     }
 }

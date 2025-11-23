@@ -15,10 +15,10 @@
     .muted{color:#6b7280;font-size:.9rem}
     .error{color:#b91c1c;margin-bottom:8px}
   </style>
-  <!-- security messages -->
+  
   <meta th:if="${param.error}" http-equiv="refresh" content="0;url='@{/login}'" />
   <meta th:if="${param.logout}" http-equiv="refresh" content="0;url='@{/login}'" />
-  <!-- The meta refresh normalizes the URL after Spring appends ?error or ?logout -->
+  
 </head>
 <body>
   <main class="container" style="max-width:420px;margin:56px auto">

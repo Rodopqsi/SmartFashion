@@ -1,0 +1,51 @@
+{
+  "generated_at":"2025-11-17T06:37:05.504323+00:00",
+  "currency":"PEN",
+  "stats":{
+    "total_products":21,
+    "total_collections":1
+  },
+  "products":[
+    {
+      "id":1,
+      "nombre":"Polo",
+      "descripcion":"Un polo bonito",
+      "precio":12.0,
+      "precio_descuento":null,
+      "categoria":{
+        "id":1,
+        "nombre":"Hombres"
+      },
+      "image_preview":"https://rematexperu.com/cdn/shop/products/30_313b4046-564b-4ed0-81ff-36a14415821c_800x.png?v=1668045565",
+      "stock_total":60,
+      "avg_rating":3.0,
+      "rating_count":1,
+      "variantes":[
+        {
+          "id":1,
+          "talla_id":1,
+          "color_id":1,
+          "stock":30
+        },
+        {
+          "id":3,
+          "talla_id":2,
+          "color_id":2,
+          "stock":30
+        }
+      ],
+      "imagenes":{
+        "general":[],
+        "por_color":{
+          "1":[
+            "https://rematexperu.com/cdn/shop/products/30_313b4046-564b-4ed0-81ff-36a14415821c_800x.png?v=1668045565"
+          ],
+          "2":[
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTj2f2uctoAEYX1Tn1SUuidx3KRZoOKHWzSxg&s"
+          ]
+        }
+      }
+    }
+    
+  ]
+}

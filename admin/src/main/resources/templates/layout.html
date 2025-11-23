@@ -63,6 +63,9 @@
       <header class="topbar">
         <button id="sidebarToggle" class="burger" aria-label="Menú">☰</button>
         <div class="topbar-title" th:text="${title}">Admin</div>
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+          <button id="themeToggle" aria-label="Cambiar tema" title="Cambiar tema" style="background:transparent;border:none;cursor:pointer;font-size:18px;padding:6px;border-radius:8px">🌙</button>
+        </div>
       </header>
       <main class="container">
         <section th:replace="${content}">Contenido</section>
@@ -70,6 +73,26 @@
     </div>
   </div>
   <script>
+    // Theme toggle: read/write localStorage and apply .theme-dark to html element
+    (function(){
+      try{
+        var current = localStorage.getItem('admin-theme') || 'light';
+        var root = document.documentElement || document.body;
+        function applyTheme(t){
+          if(t === 'dark') root.classList.add('theme-dark'); else root.classList.remove('theme-dark');
+          var btn = document.getElementById('themeToggle');
+          if(btn) btn.textContent = t === 'dark' ? '☀️' : '🌙';
+        }
+        applyTheme(current);
+        var toggle = document.getElementById('themeToggle');
+        if(toggle){ toggle.addEventListener('click', function(){
+          current = current === 'dark' ? 'light' : 'dark';
+          localStorage.setItem('admin-theme', current);
+          applyTheme(current);
+        }); }
+      }catch(e){ console.error(e); }
+    })();
+
     (function(){
       var sidebar = document.getElementById('sidebar');
       var toggle = document.getElementById('sidebarToggle');

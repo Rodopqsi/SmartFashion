@@ -20,13 +20,13 @@ public class Reclamacion {
     private String telefono;
 
     @Column(name = "tipo", nullable = false, length = 16)
-    private String tipo; // queja | reclamo
+    private String tipo; 
 
     @Column(name = "detalle", columnDefinition = "TEXT", nullable = false)
     private String detalle;
 
     @Column(name = "estado", nullable = false, length = 32)
-    private String estado = "registrado"; // registrado | en_proceso | resuelto | rechazado
+    private String estado = "registrado"; 
 
     @Column(name = "respuesta", columnDefinition = "TEXT")
     private String respuesta;
@@ -37,7 +37,7 @@ public class Reclamacion {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    // Getters and setters
+    
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

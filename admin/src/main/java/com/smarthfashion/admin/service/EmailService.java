@@ -1,6 +1,7 @@
 package com.smarthfashion.admin.service;
 
 import com.smarthfashion.admin.domain.Devolucion;
+import com.smarthfashion.admin.domain.Orders;
 import com.smarthfashion.admin.domain.Reclamacion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,13 +9,18 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring6.SpringTemplateEngine;
 
 @Service
 public class EmailService {
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
-    private final JavaMailSender mailSender; // may be null when mail is not configured
+    private final JavaMailSender mailSender; 
+    private final SpringTemplateEngine templateEngine; 
 
     @Value("${app.mail.from:no-reply@smartfashion.local}")
     private String from;
@@ -22,8 +28,10 @@ public class EmailService {
     @Value("${app.base-url:https://smartfashion.local}")
     private String baseUrl;
 
-    public EmailService(ObjectProvider<JavaMailSender> mailSenderProvider) {
+    public EmailService(ObjectProvider<JavaMailSender> mailSenderProvider,
+                        ObjectProvider<SpringTemplateEngine> templateProvider) {
         this.mailSender = mailSenderProvider.getIfAvailable();
+        this.templateEngine = templateProvider.getIfAvailable();
     }
 
     public void notifyClaimStatus(Reclamacion c) {
@@ -48,6 +56,43 @@ public class EmailService {
                 "Puedes ver el detalle en tu perfil.\n" + baseUrl + "/perfil" + "\n\n" +
                 "Saludos,\nSmartFashion";
         sendSafe(d.getEmail(), subject, body);
+    }
+
+    public void sendOrderStatusEmail(Orders order) {
+        if (order == null || order.getEmail() == null || order.getEmail().isBlank()) return;
+        String to = order.getEmail();
+        String subject = "Actualización de estado - Pedido " + order.getOrderNumber();
+        try {
+            if (mailSender == null) {
+                log.info("Email not configured. Skipping HTML email to {}", to);
+                
+                String body = "Hola " + safe(order.getOrderNumber()) + ",\n\nTu pedido ha cambiado de estado a: " + safe(order.getStatus() == null ? "" : order.getStatus().name()) + "\n\n" + baseUrl + "/perfil";
+                sendSafe(to, subject, body);
+                return;
+            }
+            if (templateEngine != null) {
+                Context ctx = new Context();
+                ctx.setVariable("orderNumber", order.getOrderNumber());
+                ctx.setVariable("status", order.getStatus() == null ? "" : order.getStatus().name());
+                ctx.setVariable("name", safe(order.getOrderNumber()));
+                ctx.setVariable("total", order.getTotal());
+                String html = templateEngine.process("email/status-update", ctx);
+                MimeMessage mime = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(mime, true, "UTF-8");
+                helper.setFrom(from);
+                helper.setTo(to);
+                helper.setSubject(subject);
+                helper.setText(html, true);
+                mailSender.send(mime);
+                log.info("Sent HTML status email to {}", to);
+                return;
+            }
+            
+            String body = "Hola,\n\nTu pedido " + safe(order.getOrderNumber()) + " ha cambiado de estado a: " + safe(order.getStatus() == null ? "" : order.getStatus().name()) + "\n\n" + baseUrl + "/perfil";
+            sendSafe(to, subject, body);
+        } catch (Exception e) {
+            log.warn("Failed to send order status email to {}: {}", to, e.getMessage());
+        }
     }
 
     private void sendSafe(String to, String subject, String text) {

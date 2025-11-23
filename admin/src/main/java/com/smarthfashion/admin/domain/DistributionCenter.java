@@ -12,7 +12,7 @@ public class DistributionCenter {
     @Column(nullable = false)
     private String nombre;
 
-    // Región o ciudad donde opera el centro
+    
     @Column(nullable = false)
     private String region;
 

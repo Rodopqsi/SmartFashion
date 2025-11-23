@@ -25,7 +25,6 @@ def generate_products_snapshot() -> dict:
     """Build an in-memory snapshot of products, variants, images, ratings & collections.
     Returns the dict; caller is responsible for writing atomically.
     """
-    # Products core info with aggregated stock
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -44,7 +43,6 @@ def generate_products_snapshot() -> dict:
 
     product_ids = [r[0] for r in product_rows]
 
-    # Variants by product
     variants_by_product = {pid: [] for pid in product_ids}
     if product_ids:
         with connection.cursor() as cursor:
@@ -64,7 +62,6 @@ def generate_products_snapshot() -> dict:
                     'stock': stock,
                 })
 
-    # Images by product (general + by color)
     images_general = {pid: [] for pid in product_ids}
     images_by_color = {pid: {} for pid in product_ids}
     if product_ids:
@@ -83,7 +80,6 @@ def generate_products_snapshot() -> dict:
                 else:
                     images_by_color[pid].setdefault(str(color_id), []).append(url)
 
-    # Ratings aggregate
     avg_rating = {pid: 0.0 for pid in product_ids}
     rating_count = {pid: 0 for pid in product_ids}
     if product_ids:
@@ -100,7 +96,6 @@ def generate_products_snapshot() -> dict:
                 avg_rating[pid] = float(a or 0.0)
                 rating_count[pid] = int(c or 0)
 
-    # Collections mapping (only IDs of products per collection to stay lightweight)
     collections = []
     with connection.cursor() as cursor:
         cursor.execute(
@@ -143,7 +138,7 @@ def generate_products_snapshot() -> dict:
             'nombre': r[1],
             'descripcion': r[2],
             'precio': float(r[3]),
-            'precio_descuento': None,  # placeholder for future promotion logic
+            'precio_descuento': None,
             'categoria': {'id': r[4], 'nombre': r[5]} if r[4] is not None else None,
             'image_preview': r[6],
             'stock_total': int(r[7] or 0),
@@ -156,7 +151,6 @@ def generate_products_snapshot() -> dict:
             },
         })
 
-    # Colors and sizes dictionaries to enable chatbot lookups
     colors = []
     with connection.cursor() as cursor:
         try:
@@ -193,7 +187,6 @@ def generate_products_snapshot() -> dict:
 
 
 def _compute_hash(snapshot: dict) -> str:
-    # Hash only content-bearing fields
     core = {
         'currency': snapshot.get('currency'),
         'products': snapshot.get('products'),
@@ -207,7 +200,6 @@ def _compute_hash(snapshot: dict) -> str:
 
 def write_snapshot_file(snapshot: dict) -> str:
     path = snapshot_path()
-    # Load existing and skip write if unchanged
     try:
         if os.path.exists(path):
             with open(path, 'r', encoding='utf-8') as f:
@@ -217,14 +209,12 @@ def write_snapshot_file(snapshot: dict) -> str:
     except Exception:
         pass
 
-    # Attach content hash to meta
     try:
         snapshot.setdefault('meta', {})['content_hash'] = _compute_hash(snapshot)
     except Exception:
         pass
 
     data = json.dumps(snapshot, ensure_ascii=False, separators=(',', ':'), indent=2)
-    # Atomic write
     fd, tmp_path = tempfile.mkstemp(prefix='snap_', suffix='.json', dir=os.path.dirname(path))
     try:
         with os.fdopen(fd, 'w', encoding='utf-8') as f:

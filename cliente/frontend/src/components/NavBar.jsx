@@ -109,8 +109,17 @@ export default function NavBar(){
             style={{ display:'grid', placeItems:'center', width:24, height:24, border:'none', background:'transparent', cursor:'pointer' }}
             aria-label="Buscar"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={20} height={20} style={{ fill:'#000000ff' }}>
-              <path d="M18.9 16.776A10.539 10.539 0 1 0 16.776 18.9l5.1 5.1L24 21.88Zm-8.4 1.224A7.5 7.5 0 1 1 18 10.5 7.507 7.507 0 0 1 10.5 18Z"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              id="Isolation_Mode"
+              data-name="Isolation Mode"
+              viewBox="0 0 24 24"
+              width="22"
+              height="22"
+            >
+              <path
+                d="M18.9,16.776A10.539,10.539,0,1,0,16.776,18.9l5.1,5.1L24,21.88ZM10.5,18A7.5,7.5,0,1,1,18,10.5,7.507,7.507,0,0,1,10.5,18Z"
+              ></path>
             </svg>
           </button>
           <input
@@ -139,14 +148,14 @@ export default function NavBar(){
               {user.username || user.email}
             </button>
             {openMenu && (
-              <div className="dropdown" role="menu" style={{ position:'absolute', right:0, top:'2.5rem', background:'var(--bg, #fff)', border:'1px solid #ddd', borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,.12)', minWidth:180, zIndex:1000 }}>
-                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/perfil') }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer' }}>Mi Perfil</button>
-                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/direcciones') }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer' }}>Mis Direcciones</button>
-                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/reclamos') }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer' }}>Mis Reclamos</button>
-                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/devoluciones') }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer' }}>Mis Devoluciones</button>
-                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/favoritos') }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer' }}>Mis Favoritos</button>
-                <hr style={{ margin:'6px 0', border:'none', borderTop:'1px solid #eee' }}/>
-                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); logout() }} style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 12px', background:'transparent', border:'none', cursor:'pointer', color:'#b00' }}>Cerrar Sesión</button>
+              <div className="dropdown" role="menu">
+                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/perfil') }}>Mi Perfil</button>
+                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/direcciones') }}>Mis Direcciones</button>
+                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/reclamos') }}>Mis Reclamos</button>
+                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/devoluciones') }}>Mis Devoluciones</button>
+                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/favoritos') }}>Mis Favoritos</button>
+                <hr className="dropdown-sep"/>
+                <button className="dropdown-item logout" onClick={()=>{ setOpenMenu(false); logout() }}>Cerrar Sesión</button>
               </div>
             )}
           </div>
@@ -159,8 +168,8 @@ export default function NavBar(){
         <div className="vertical-sep">|</div>
         <button className="icon-btn" aria-label="Carrito" onClick={()=> navigate('/carrito')} style={{position:'relative'}}>
           <svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20.2236 12.5257C19.6384 9.40452 19.3458 7.84393 18.2349 6.92196C17.124 6 15.5362 6 12.3606 6H11.6394C8.46386 6 6.87608 6 5.76518 6.92196C4.65428 7.84393 4.36167 9.40452 3.77645 12.5257C2.95353 16.9146 2.54207 19.1091 3.74169 20.5545C4.94131 22 7.17402 22 11.6394 22H12.3606C16.826 22 19.0587 22 20.2584 20.5545C20.9543 19.7159 21.108 18.6252 20.9537 17" stroke="#000" strokeWidth="2" strokeLinecap="round" />
-            <path d="M9 6V5C9 3.34315 10.3431 2 12 2C13.6569 2 15 3.34315 15 5V6" stroke="#1C274C" strokeWidth="2" strokeLinecap="round" />
+            <path d="M20.2236 12.5257C19.6384 9.40452 19.3458 7.84393 18.2349 6.92196C17.124 6 15.5362 6 12.3606 6H11.6394C8.46386 6 6.87608 6 5.76518 6.92196C4.65428 7.84393 4.36167 9.40452 3.77645 12.5257C2.95353 16.9146 2.54207 19.1091 3.74169 20.5545C4.94131 22 7.17402 22 11.6394 22H12.3606C16.826 22 19.0587 22 20.2584 20.5545C20.9543 19.7159 21.108 18.6252 20.9537 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path d="M9 6V5C9 3.34315 10.3431 2 12 2C13.6569 2 15 3.34315 15 5V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
           <span>My Cart</span>
           {count>0 && (<span style={{position:'absolute', top:-2, right:-6, background:'#111', color:'#fff', borderRadius:12, padding:'2px 6px', fontSize:10, fontWeight:700}}>{count}</span>)}

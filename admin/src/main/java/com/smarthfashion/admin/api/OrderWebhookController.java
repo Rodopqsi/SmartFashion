@@ -37,9 +37,9 @@ public class OrderWebhookController {
         this.eventRepo = eventRepo;
     }
 
-    // Minimal contract for creating shipments from the checkout system
-    // Inputs: orderNumber, destinatario, direccion, regionDestino, (optional) centroRegion
-    // Output: shipmentId, trackingUrl
+    
+    
+    
     @PostMapping("/orders")
     public ResponseEntity<?> createShipmentForOrder(
             @RequestHeader(value = "X-Webhook-Token", required = false) String token,
@@ -86,7 +86,7 @@ public class OrderWebhookController {
     s.setTelefonoDestino(telefono);
         s.setStatus(ShipmentStatus.CREADO);
 
-        // Auto-assign company and cost using same logic as UI
+        
         List<ShippingRule> rules = ruleRepo.findByOrigenRegionIgnoreCaseAndDestinoRegionIgnoreCaseOrderByPrioridadAsc(center.getRegion(), regionDestino);
         if (!rules.isEmpty()) {
             ShippingRule r = rules.get(0);

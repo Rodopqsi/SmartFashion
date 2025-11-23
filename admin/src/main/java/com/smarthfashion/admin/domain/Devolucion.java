@@ -21,16 +21,16 @@ public class Devolucion {
     private String telefono;
 
     @Column(name = "motivo", nullable = false, length = 64)
-    private String motivo; // talla_incorrecta | defectuoso | no_satisfecho | otro
+    private String motivo; 
 
     @Column(name = "descripcion", columnDefinition = "TEXT")
     private String descripcion;
 
     @Column(name = "metodo", nullable = false, length = 16)
-    private String metodo; // cambio | reembolso
+    private String metodo; 
 
     @Column(name = "estado", nullable = false, length = 32)
-    private String estado = "solicitado"; // solicitado | aprobado | rechazado | recibido | reembolsado | completado
+    private String estado = "solicitado"; 
 
     @Column(name = "created_at")
     private Instant createdAt;
@@ -41,7 +41,7 @@ public class Devolucion {
     @OneToMany(mappedBy = "devolucion", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<DevolucionItem> items;
 
-    // Getters and setters
+    
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getOrderNumber() { return orderNumber; }
