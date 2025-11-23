@@ -27,14 +27,14 @@ EXT_LANG = {
     '.sql': 'sql', '.properties': 'props', '.env': 'props', '.sh': 'sh', '.ps1': 'ps1'
 }
 
-PRESERVE_KEYWORDS = ['TODO', 'FIXME', 'COPYRIGHT', 'LICENSE', '@license', '
+PRESERVE_KEYWORDS = ['TODO', 'FIXME', 'COPYRIGHT', 'LICENSE', '@license', ']#!']
 
 re_c_block = re.compile(r'/\*.*?\*/', re.S)
 re_c_line = re.compile(r'//.*?$' , re.M)
 re_html_comment = re.compile(r'<!--.*?-->', re.S)
-re_py_line = re.compile(r'(^\s*
+re_py_line = re.compile(r'(^\s*#.*$)', re.M)
 re_sql_line = re.compile(r'(^\s*--.*$)', re.M)
-re_props_line = re.compile(r'(^\s*[^=\n]*
+re_props_line = re.compile(r'(^\s*[^=\n]*)#.*$', re.M)
 
 def contains_preserve(text):
     up = text.upper()
@@ -62,14 +62,14 @@ def process_file(path: Path):
         lines = text.splitlines(True)
         out = []
         for ln in lines:
-            if ln.lstrip().startswith('
+            if ln.lstrip().startswith('#'):
                 if contains_preserve(ln):
                     out.append(ln)
                 else:
                     changed = True
                 continue
-            if '
-                parts = ln.split('
+            if '# ' in ln:
+                parts = ln.split('# ', 1)
                 code, comment = parts[0], parts[1]
                 if contains_preserve(comment):
                     out.append(ln)
