@@ -34,3 +34,6 @@ Thumbs.db
 
 # Misc
 *.local
+
+# Deploy env (do not commit secrets)
+deploy/.env
