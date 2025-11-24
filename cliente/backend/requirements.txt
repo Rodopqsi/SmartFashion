@@ -14,3 +14,6 @@ google-generativeai==0.8.3
 # Nota: mysqlclient se omite para evitar compilar en Windows sin Build Tools.
 # Si instalas Microsoft C++ Build Tools y MySQL/MariaDB dev libs, puedes añadir:
 # mysqlclient==2.2.4
+
+# WSGI server for production
+gunicorn==20.1.0
