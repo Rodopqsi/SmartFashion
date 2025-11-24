@@ -2,6 +2,7 @@ FROM maven:3.9.4-eclipse-temurin-17 AS build
 WORKDIR /build
 COPY ../admin/ ./
 RUN mvn -f pom.xml -DskipTests package
+RUN mvn -f pom.xml -DskipTests package spring-boot:repackage
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
