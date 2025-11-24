@@ -62,6 +62,10 @@ services:
       - frontend
       - backend
       - admin
+    links:
+      - frontend
+      - backend
+      - admin
     networks:
       - sf_net
 
