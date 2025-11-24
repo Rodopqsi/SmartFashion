@@ -18,6 +18,8 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
   const [verifyStep, setVerifyStep] = useState({ active:false, email:'', code:'' })
   const [googlePending, setGooglePending] = useState({ active:false, email:'', suggested:'', pending:'', username:'' })
+  const [googleWorking, setGoogleWorking] = useState(false)
+  const [googleError, setGoogleError] = useState('')
 
   const validators = {
     name: v => isLogin ? null : (!v.trim() ? 'Nombre requerido' : (v.trim().length < 2 ? 'Mínimo 2 caracteres' : null)),
