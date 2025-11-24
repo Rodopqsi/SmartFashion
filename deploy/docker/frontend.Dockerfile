@@ -11,5 +11,7 @@ RUN npm run build
 
 FROM nginx:stable-alpine
 COPY --from=build /app/dist/ /usr/share/nginx/html/
+# Also include any static /img folder from the source (some images live in /cliente/frontend/img)
+COPY --from=build /app/img/ /usr/share/nginx/html/img/
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
