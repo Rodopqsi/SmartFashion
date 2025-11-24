@@ -15,9 +15,3 @@ COPY --from=build /build/target/*.jar ./app.jar
 EXPOSE 8080
 
 CMD ["sh", "-c", "java -cp 'classes:dependency/*' com.smarthfashion.admin.AdminApplication"]
-
-FROM eclipse-temurin:17-jre-alpine
-WORKDIR /app
-COPY --from=build /build/target/*.jar ./app.jar
-EXPOSE 8080
-CMD ["java", "-jar", "app.jar"]
