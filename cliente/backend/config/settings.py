@@ -9,6 +9,13 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-me')
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('1','true','yes')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
+# If running behind a reverse proxy that terminates TLS, instruct Django
+# to trust the X-Forwarded-Proto header so request.is_secure() is correct.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Trusted origins for CSRF checks (include public URL)
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://smarthfashion.shop').split(',')
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
