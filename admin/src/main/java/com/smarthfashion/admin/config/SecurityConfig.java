@@ -36,21 +36,21 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/css/**", "/login", "/error", "/sso/login", "/ping", "/tracking/**").permitAll()
-                
+                .requestMatchers("/css/**", "/admin/login", "/error", "/sso/login", "/ping", "/tracking/**").permitAll()
+
                 .requestMatchers("/api/internal/**").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
-            
+
             .formLogin(login -> login
-                .loginPage("/login")
+                .loginPage("/admin/login")
                 .defaultSuccessUrl("/admin/products", true)
                 .permitAll()
             )
             .logout(logout -> logout
                 .logoutUrl("/logout")
-                .logoutSuccessUrl("/login?logout")
+                .logoutSuccessUrl("/admin/login?logout")
                 .permitAll()
             )
             .csrf(csrf -> csrf.ignoringRequestMatchers(new AntPathRequestMatcher("/api/internal/**")));
