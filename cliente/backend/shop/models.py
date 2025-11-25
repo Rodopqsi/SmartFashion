@@ -7,7 +7,7 @@ class Categoria(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'Categorias'
+        db_table = 'categorias'
 
 
 class Producto(models.Model):
@@ -20,7 +20,7 @@ class Producto(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'Producto'
+        db_table = 'producto'
 
 
 class VariacionProducto(models.Model):
@@ -125,7 +125,7 @@ class Coleccion(models.Model):
 
     class Meta:
         managed = False
-    db_table = 'Coleccion'
+        db_table = 'coleccion'
 
 
 class ColeccionProducto(models.Model):
@@ -135,4 +135,4 @@ class ColeccionProducto(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'ColeccionProducto'
+        db_table = 'coleccionproducto'
