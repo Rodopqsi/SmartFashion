@@ -1,9 +1,5 @@
 Enter password: 
 -- MySQL dump 10.13  Distrib 8.0.43, for Linux (x86_64)
---
--- Host: host.docker.internal    Database: smarthfashion
--- ------------------------------------------------------
--- Server version	9.4.0
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;

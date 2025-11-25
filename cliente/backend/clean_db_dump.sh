@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Script to create a cleaned SQL dump file from a possibly contaminated dump
 # Usage: ./clean_db_dump.sh /path/to/db_dump_full.utf8.sql /path/to/output_cleaned.sql
 
