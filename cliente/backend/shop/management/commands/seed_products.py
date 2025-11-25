@@ -22,7 +22,7 @@ class Command(BaseCommand):
         with connection.cursor() as cursor:
             # obtener categorías (crear básicas si faltan)
             try:
-                cursor.execute("SELECT id, nombre FROM Categorias ORDER BY id ASC")
+                cursor.execute("SELECT id, nombre FROM categorias ORDER BY id ASC")
                 categorias = cursor.fetchall()
             except Exception:
                 categorias = []
@@ -31,8 +31,8 @@ class Command(BaseCommand):
                 self.stdout.write('No se encontraron categorías — insertando categorías demo...')
                 demo_cats = ['Ropa', 'Calzado', 'Accesorios']
                 for c in demo_cats:
-                    cursor.execute("INSERT INTO Categorias (nombre) VALUES (%s)", (c,))
-                cursor.execute("SELECT id, nombre FROM Categorias ORDER BY id ASC")
+                    cursor.execute("INSERT INTO categorias (nombre) VALUES (%s)", (c,))
+                cursor.execute("SELECT id, nombre FROM categorias ORDER BY id ASC")
                 categorias = cursor.fetchall()
 
             # obtener colores
@@ -75,7 +75,7 @@ class Command(BaseCommand):
 
                 # insertar producto
                 cursor.execute(
-                    "INSERT INTO Producto (nombre, descripcion, precio, id_categoria, image_preview) VALUES (%s, %s, %s, %s, %s)",
+                    "INSERT INTO producto (nombre, descripcion, precio, id_categoria, image_preview) VALUES (%s, %s, %s, %s, %s)",
                     (nombre, descripcion, precio, cat[0], image_preview),
                 )
                 cursor.execute("SELECT LAST_INSERT_ID()")
