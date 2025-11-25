@@ -351,6 +351,90 @@ def home(request):
 
 
 @api_view(['GET'])
+def product_list(request):
+    """Paginated product list endpoint for frontend consumers.
+    Mirrors the product-listing logic from `home` but returns only products and pagination.
+    """
+    category_id = request.GET.get('category_id')
+    q = request.GET.get('q')
+    size_id = request.GET.get('size')
+    color_id = request.GET.get('color')
+
+    filters = []
+    params = []
+    if category_id and category_id.isdigit():
+        filters.append('p.id_categoria = %s')
+        params.append(int(category_id))
+    if q:
+        filters.append('(p.nombre LIKE %s OR p.descripcion LIKE %s)')
+        like = f"%{q}%"
+        params.extend([like, like])
+    if size_id and size_id.isdigit():
+        filters.append('EXISTS (SELECT 1 FROM variaciones_producto v2 WHERE v2.id_producto = p.id AND v2.id_talla = %s)')
+        params.append(int(size_id))
+    if color_id and color_id.isdigit():
+        filters.append('EXISTS (SELECT 1 FROM variaciones_producto v3 WHERE v3.id_producto = p.id AND v3.id_color = %s)')
+        params.append(int(color_id))
+
+    where_clause = ''
+    if filters:
+        where_clause = 'WHERE ' + ' AND '.join(filters)
+
+    limit = request.GET.get('limit')
+    page = request.GET.get('page')
+    try:
+        limit_v = min(max(int(limit), 1), 100) if limit else 12
+    except ValueError:
+        limit_v = 12
+    try:
+        page_v = max(int(page), 1) if page else 1
+    except ValueError:
+        page_v = 1
+    offset_v = (page_v - 1) * limit_v
+
+    count_query = f"""
+        SELECT COUNT(DISTINCT p.id)
+        FROM Producto p
+        LEFT JOIN variaciones_producto v ON v.id_producto = p.id
+        {where_clause}
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(count_query, params)
+        total_count_row = cursor.fetchone()
+    total_count = int(total_count_row[0] if total_count_row else 0)
+
+    data_query = f"""
+        SELECT p.id, p.nombre, p.descripcion, p.precio, c.id AS categoria_id, c.nombre AS categoria_nombre, p.image_preview,
+               COALESCE(SUM(v.stock), 0) AS stock_total
+        FROM Producto p
+        LEFT JOIN Categorias c ON c.id = p.id_categoria
+        LEFT JOIN variaciones_producto v ON v.id_producto = p.id
+        {where_clause}
+        GROUP BY p.id, p.nombre, p.descripcion, p.precio, c.id, c.nombre, p.image_preview
+        ORDER BY p.id DESC
+        LIMIT %s OFFSET %s
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(data_query, [*params, limit_v, offset_v])
+        prod_rows = cursor.fetchall()
+
+    products = []
+    for r in prod_rows:
+        products.append({
+            'id': r[0],
+            'nombre': r[1],
+            'descripcion': r[2],
+            'precio': r[3],
+            'precio_descuento': None,
+            'categoria': {'id': r[4], 'nombre': r[5]} if r[4] is not None else None,
+            'image_preview': r[6],
+            'stock_total': int(r[7] or 0),
+        })
+
+    return Response({'status': 'ok', 'data': {'products': ProductoCardSerializer(products, many=True).data, 'pagination': {'page': page_v, 'limit': limit_v, 'total': total_count}}})
+
+
+@api_view(['GET'])
 def sizes(request):
     with connection.cursor() as cursor:
         cursor.execute("SELECT id, nombre, tipo FROM tallas ORDER BY id ASC")

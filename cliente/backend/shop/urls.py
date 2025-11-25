@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    home, sizes, colors, product_detail, product_reviews,
+    home, sizes, colors, product_list, product_detail, product_reviews,
     checkout_preview, checkout_confirm,
     address_default, address_set_default,
     addresses, address_detail, address_mark_default,
@@ -15,6 +15,7 @@ urlpatterns = [
     path('home/', home, name='home'),
     path('sizes/', sizes, name='sizes'),
     path('colors/', colors, name='colors'),
+    path('products/', product_list, name='product-list'),
     path('products/<int:pk>/', product_detail, name='product-detail'),
     path('products/<int:pk>/reviews/', product_reviews, name='product-reviews'),
     path('checkout/preview/', checkout_preview, name='checkout-preview'),

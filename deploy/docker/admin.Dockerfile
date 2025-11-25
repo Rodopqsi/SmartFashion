@@ -11,7 +11,10 @@ WORKDIR /app
 COPY --from=build /build/target/classes ./classes
 COPY --from=build /build/target/dependency ./dependency
 
+# Ensure static resources are present in final image (copy from target/classes/static if produced)
+COPY --from=build /build/target/classes/static ./classes/static
+
 COPY --from=build /build/target/*.jar ./app.jar
-EXPOSE 8080
+EXPOSE 8081
 
 CMD ["sh", "-c", "java -cp 'classes:dependency/*' com.smarthfashion.admin.AdminApplication"]
