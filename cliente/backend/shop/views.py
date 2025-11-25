@@ -199,7 +199,7 @@ def address_mark_default(request, addr_id: int):
 @api_view(['GET'])
 def home(request):
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id, nombre FROM Categorias ORDER BY nombre ASC")
+        cursor.execute("SELECT id, nombre FROM categorias ORDER BY nombre ASC")
         rows = cursor.fetchall()
         categories = [{'id': r[0], 'nombre': r[1]} for r in rows]
 
@@ -242,7 +242,7 @@ def home(request):
 
     count_query = f"""
         SELECT COUNT(DISTINCT p.id)
-        FROM Producto p
+        FROM producto p
         LEFT JOIN variaciones_producto v ON v.id_producto = p.id
         {where_clause}
     """
@@ -254,8 +254,8 @@ def home(request):
     data_query = f"""
         SELECT p.id, p.nombre, p.descripcion, p.precio, c.id AS categoria_id, c.nombre AS categoria_nombre, p.image_preview,
                COALESCE(SUM(v.stock), 0) AS stock_total
-        FROM Producto p
-        LEFT JOIN Categorias c ON c.id = p.id_categoria
+        FROM producto p
+        LEFT JOIN categorias c ON c.id = p.id_categoria
         LEFT JOIN variaciones_producto v ON v.id_producto = p.id
         {where_clause}
         GROUP BY p.id, p.nombre, p.descripcion, p.precio, c.id, c.nombre, p.image_preview
@@ -284,7 +284,7 @@ def home(request):
         cursor.execute(
             """
             SELECT id, nombre, slug, descripcion, image_url, orden
-            FROM Coleccion
+            FROM coleccion
             WHERE activo = 1
             ORDER BY orden ASC, id DESC
             LIMIT 8
@@ -296,21 +296,21 @@ def home(request):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT p.id, p.nombre, p.descripcion, p.precio,
-                       c.id AS categoria_id, c.nombre AS categoria_nombre,
-                       p.image_preview,
-                       COALESCE(SUM(v.stock), 0) AS stock_total
-                FROM ColeccionProducto cp
-                JOIN Producto p ON p.id = cp.id_producto
-                LEFT JOIN Categorias c ON c.id = p.id_categoria
-                LEFT JOIN variaciones_producto v ON v.id_producto = p.id
-                WHERE cp.id_coleccion = %s
-                GROUP BY p.id, p.nombre, p.descripcion, p.precio, c.id, c.nombre, p.image_preview
-                ORDER BY p.id DESC
-                LIMIT 8
-                """,
-                [col_id]
-            )
+                  SELECT p.id, p.nombre, p.descripcion, p.precio,
+                      c.id AS categoria_id, c.nombre AS categoria_nombre,
+                      p.image_preview,
+                      COALESCE(SUM(v.stock), 0) AS stock_total
+                  FROM coleccionproducto cp
+                  JOIN producto p ON p.id = cp.id_producto
+                  LEFT JOIN categorias c ON c.id = p.id_categoria
+                  LEFT JOIN variaciones_producto v ON v.id_producto = p.id
+                  WHERE cp.id_coleccion = %s
+                  GROUP BY p.id, p.nombre, p.descripcion, p.precio, c.id, c.nombre, p.image_preview
+                  ORDER BY p.id DESC
+                  LIMIT 8
+                  """,
+                  [col_id]
+                 )
             prows = cursor.fetchall()
         prods = []
         for r in prows:
@@ -394,7 +394,7 @@ def product_list(request):
 
     count_query = f"""
         SELECT COUNT(DISTINCT p.id)
-        FROM Producto p
+        FROM producto p
         LEFT JOIN variaciones_producto v ON v.id_producto = p.id
         {where_clause}
     """
@@ -406,8 +406,8 @@ def product_list(request):
     data_query = f"""
         SELECT p.id, p.nombre, p.descripcion, p.precio, c.id AS categoria_id, c.nombre AS categoria_nombre, p.image_preview,
                COALESCE(SUM(v.stock), 0) AS stock_total
-        FROM Producto p
-        LEFT JOIN Categorias c ON c.id = p.id_categoria
+        FROM producto p
+        LEFT JOIN categorias c ON c.id = p.id_categoria
         LEFT JOIN variaciones_producto v ON v.id_producto = p.id
         {where_clause}
         GROUP BY p.id, p.nombre, p.descripcion, p.precio, c.id, c.nombre, p.image_preview
@@ -460,8 +460,8 @@ def product_detail(request, pk: int):
             """
             SELECT p.id, p.nombre, p.descripcion, p.precio, c.id AS categoria_id, c.nombre AS categoria_nombre, p.image_preview,
                    COALESCE(SUM(v.stock), 0) AS stock_total
-            FROM Producto p
-            LEFT JOIN Categorias c ON c.id = p.id_categoria
+            FROM producto p
+            LEFT JOIN categorias c ON c.id = p.id_categoria
             LEFT JOIN variaciones_producto v ON v.id_producto = p.id
             WHERE p.id = %s
             GROUP BY p.id, p.nombre, p.descripcion, p.precio, c.id, c.nombre, p.image_preview
@@ -548,7 +548,7 @@ def product_detail(request, pk: int):
                 """
                 SELECT p.id, p.nombre, p.descripcion, p.precio, p.image_preview,
                        COALESCE(SUM(v.stock), 0) AS stock_total
-                FROM Producto p
+                FROM producto p
                 LEFT JOIN variaciones_producto v ON v.id_producto = p.id
                 WHERE p.id_categoria = %s AND p.id <> %s
                 GROUP BY p.id, p.nombre, p.descripcion, p.precio, p.image_preview
@@ -661,7 +661,7 @@ def checkout_preview(request):
             return Response({'status': 'invalid', 'message': 'item inválido'}, status=status.HTTP_400_BAD_REQUEST)
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT nombre, precio, image_preview FROM Producto WHERE id=%s", [pid])
+            cursor.execute("SELECT nombre, precio, image_preview FROM producto WHERE id=%s", [pid])
             prow = cursor.fetchone()
         if not prow:
             return Response({'status': 'invalid', 'message': f'producto {pid} no existe'}, status=status.HTTP_400_BAD_REQUEST)
@@ -747,7 +747,7 @@ def checkout_confirm(request):
 
                 if pid not in price_cache:
                     with connection.cursor() as cursor:
-                        cursor.execute("SELECT precio, nombre, image_preview FROM Producto WHERE id=%s", [pid])
+                        cursor.execute("SELECT precio, nombre, image_preview FROM producto WHERE id=%s", [pid])
                         prow = cursor.fetchone()
                     price_cache[pid] = {
                         'price': float(prow[0] or 0) if prow else 0.0,
@@ -1281,7 +1281,7 @@ def collection_detail(request, slug: str):
         cursor.execute(
             """
             SELECT id, nombre, slug, descripcion, image_url, orden
-            FROM Coleccion
+            FROM coleccion
             WHERE slug = %s AND activo = 1
             LIMIT 1
             """,
@@ -1345,8 +1345,8 @@ def collection_detail(request, slug: str):
         cursor.execute(
             f"""
             SELECT COUNT(DISTINCT p.id)
-            FROM ColeccionProducto cp
-            JOIN Producto p ON p.id = cp.id_producto
+            FROM coleccionproducto cp
+            JOIN producto p ON p.id = cp.id_producto
             LEFT JOIN variaciones_producto v ON v.id_producto = p.id
             WHERE {where_clause}
             """,
@@ -1361,9 +1361,9 @@ def collection_detail(request, slug: str):
                    c.id AS categoria_id, c.nombre AS categoria_nombre,
                    p.image_preview,
                    COALESCE(SUM(v.stock), 0) AS stock_total
-            FROM ColeccionProducto cp
-            JOIN Producto p ON p.id = cp.id_producto
-            LEFT JOIN Categorias c ON c.id = p.id_categoria
+            FROM coleccionproducto cp
+            JOIN producto p ON p.id = cp.id_producto
+            LEFT JOIN categorias c ON c.id = p.id_categoria
             LEFT JOIN variaciones_producto v ON v.id_producto = p.id
             WHERE {where_clause}
             GROUP BY p.id, p.nombre, p.descripcion, p.precio, c.id, c.nombre, p.image_preview
@@ -1387,8 +1387,8 @@ def collection_detail(request, slug: str):
         cursor.execute(
             """
             SELECT DISTINCT t.id, t.nombre, t.tipo
-            FROM ColeccionProducto cp
-            JOIN Producto p ON p.id = cp.id_producto
+            FROM coleccionproducto cp
+            JOIN producto p ON p.id = cp.id_producto
             JOIN variaciones_producto v ON v.id_producto = p.id
             JOIN tallas t ON t.id = v.id_talla
             WHERE cp.id_coleccion = %s
@@ -1401,8 +1401,8 @@ def collection_detail(request, slug: str):
         cursor.execute(
             """
             SELECT DISTINCT co.id, co.nombre, co.codigo_hex
-            FROM ColeccionProducto cp
-            JOIN Producto p ON p.id = cp.id_producto
+            FROM coleccionproducto cp
+            JOIN producto p ON p.id = cp.id_producto
             JOIN variaciones_producto v ON v.id_producto = p.id
             JOIN colores co ON co.id = v.id_color
             WHERE cp.id_coleccion = %s
