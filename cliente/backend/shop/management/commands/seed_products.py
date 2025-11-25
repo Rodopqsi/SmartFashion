@@ -20,26 +20,50 @@ class Command(BaseCommand):
         count = options.get('count', 5)
 
         with connection.cursor() as cursor:
-            # obtener categorías
-            cursor.execute("SELECT id, nombre FROM Categorias ORDER BY id ASC")
-            categorias = cursor.fetchall()
+            # obtener categorías (crear básicas si faltan)
+            try:
+                cursor.execute("SELECT id, nombre FROM Categorias ORDER BY id ASC")
+                categorias = cursor.fetchall()
+            except Exception:
+                categorias = []
+
             if not categorias:
-                self.stderr.write('No hay categorías en la base de datos. Crea categorías antes.')
-                return
+                self.stdout.write('No se encontraron categorías — insertando categorías demo...')
+                demo_cats = ['Ropa', 'Calzado', 'Accesorios']
+                for c in demo_cats:
+                    cursor.execute("INSERT INTO Categorias (nombre) VALUES (%s)", (c,))
+                cursor.execute("SELECT id, nombre FROM Categorias ORDER BY id ASC")
+                categorias = cursor.fetchall()
 
             # obtener colores
-            cursor.execute("SELECT id, nombre FROM colores ORDER BY id ASC")
-            colores = [r[0] for r in cursor.fetchall()]
+            try:
+                cursor.execute("SELECT id, nombre FROM colores ORDER BY id ASC")
+                colores = [r[0] for r in cursor.fetchall()]
+            except Exception:
+                colores = []
+
             if not colores:
-                self.stderr.write('No hay colores en la base de datos. Crea colores antes.')
-                return
+                self.stdout.write('No se encontraron colores — insertando colores demo...')
+                demo_colors = [('Negro', '#000000'), ('Blanco', '#FFFFFF'), ('Rojo', '#FF0000')]
+                for nombre, hexcode in demo_colors:
+                    cursor.execute("INSERT INTO colores (nombre, codigo_hex) VALUES (%s, %s)", (nombre, hexcode))
+                cursor.execute("SELECT id FROM colores")
+                colores = [r[0] for r in cursor.fetchall()]
 
             # obtener tallas
-            cursor.execute("SELECT id, nombre FROM tallas ORDER BY id ASC")
-            tallas = [r[0] for r in cursor.fetchall()]
+            try:
+                cursor.execute("SELECT id, nombre FROM tallas ORDER BY id ASC")
+                tallas = [r[0] for r in cursor.fetchall()]
+            except Exception:
+                tallas = []
+
             if not tallas:
-                self.stderr.write('No hay tallas en la base de datos. Crea tallas antes.')
-                return
+                self.stdout.write('No se encontraron tallas — insertando tallas demo...')
+                demo_sizes = [('S', 'estandar'), ('M', 'estandar'), ('L', 'estandar')]
+                for nombre, tipo in demo_sizes:
+                    cursor.execute("INSERT INTO tallas (nombre, tipo) VALUES (%s, %s)", (nombre, tipo))
+                cursor.execute("SELECT id FROM tallas")
+                tallas = [r[0] for r in cursor.fetchall()]
 
             created = []
             for i in range(count):
