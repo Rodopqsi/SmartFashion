@@ -35,6 +35,13 @@ services:
       - ./.env
     environment:
       - SPRING_SERVER_FORWARD_HEADERS_STRATEGY=${SERVER_FORWARD_HEADERS_STRATEGY}
+      # Database connection (point to the docker-compose `db` service)
+      - DB_URL=${DB_URL:jdbc:mysql://db:3306/smarthfashion?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+      - DB_USER=${DB_USER:root}
+      - DB_PASS=${DB_PASS:}
+      # Ensure SSO/base URL use the correct external host if not provided via .env
+      - SSO_LOGIN_URL=${SSO_LOGIN_URL:https://smarthfashion.shop/admin/login}
+      - APP_BASE_URL=${APP_BASE_URL:https://smarthfashion.shop}
     depends_on:
       - db
     networks:
