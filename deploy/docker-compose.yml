@@ -50,7 +50,7 @@ services:
       # Bind the Spring Boot server to all interfaces (IPv4 + IPv6) to avoid IPv4 connection refusals
       - SERVER_ADDRESS=${SERVER_ADDRESS:-0.0.0.0}
       # Ensure Spring Boot binds to IPv4 explicitly (fallback if SERVER_ADDRESS is ignored)
-      - SPRING_APPLICATION_JSON='{"server":{"address":"0.0.0.0"}}'
+      - SPRING_APPLICATION_JSON="{\"server\":{\"address\":\"0.0.0.0\"}}"
     depends_on:
       - db
     networks:
