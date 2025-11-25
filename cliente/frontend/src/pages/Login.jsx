@@ -186,7 +186,6 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
           <div className={`form-field ${touched.password && errors.password ? 'has-error' : ''}`}>
             <label htmlFor="password">Contraseña <span className="req">*</span></label>
             <div className="input-wrapper icon-left">
-              <span className="input-icon"></span>
               <input id="password" name="password" type="password" value={form.password} onChange={handleChange} onBlur={handleBlur} placeholder="••••••••" autoComplete={isLogin? 'current-password':'new-password'} aria-invalid={!!(touched.password && errors.password)} />
             </div>
             {touched.password && errors.password && <div className="error-msg">{errors.password}</div>}
@@ -195,7 +194,6 @@ export default function Login({ mode = 'login', onBack, onSwitch }) {
             <div className={`form-field ${touched.confirm && errors.confirm ? 'has-error' : ''}`}>
               <label htmlFor="confirm">Confirmar contraseña <span className="req">*</span></label>
               <div className="input-wrapper icon-left">
-                <span className="input-icon"></span>
                 <input id="confirm" name="confirm" type="password" value={form.confirm} onChange={handleChange} onBlur={handleBlur} placeholder="Confirmar contraseña" autoComplete="new-password" aria-invalid={!!(touched.confirm && errors.confirm)} />
               </div>
               {touched.confirm && errors.confirm && <div className="error-msg">{errors.confirm}</div>}
