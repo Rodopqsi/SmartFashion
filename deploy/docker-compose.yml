@@ -45,7 +45,7 @@ services:
       - APP_BASE_URL=${APP_BASE_URL:-https://smarthfashion.shop}
       # Ensure the session cookie is scoped for the external host and secure so browsers send it over HTTPS
       - SERVER_SERVLET_SESSION_COOKIE_DOMAIN=${SERVER_SERVLET_SESSION_COOKIE_DOMAIN:-smarthfashion.shop}
-      - SERVER_SERVLET_SESSION_COOKIE_SECURE=${SERVER_SERVLET_SESSION_COOKIE_SECURE:-"true"}
+      - SERVER_SERVLET_SESSION_COOKIE_SECURE=${SERVER_SERVLET_SESSION_COOKIE_SECURE:-true}
       - SERVER_SERVLET_SESSION_COOKIE_SAME_SITE=${SERVER_SERVLET_SESSION_COOKIE_SAME_SITE:-Lax}
     depends_on:
       - db
