@@ -25,4 +25,10 @@ public class DashboardController {
     public String login() {
         return "login"; 
     }
+
+    @GetMapping("/admin/login")
+    public String adminLogin() {
+        // Render the same login template at /admin/login so Spring Security's loginPage("/admin/login") works
+        return "login";
+    }
 }
