@@ -41,18 +41,24 @@ export default function Cart(){
         items: items.map(i => ({ product_id: i.productId, size_id: i.sizeId, color_id: i.colorId, qty: i.qty }))
       }
       const headers = { 'Content-Type':'application/json' }
-      const res = await fetchWithAuth(`${API_BASE}/api/payments/create_session/`, { method:'POST', headers, body: JSON.stringify(payload) })
+      // First, create the order locally so we have an order_number (reserve stock)
+      const confirmRes = await fetchWithAuth(`${API_BASE}/api/checkout/confirm/`, { method:'POST', headers, body: JSON.stringify(payload) })
+      const confirmJson = await confirmRes.json().catch(()=>null)
+      const orderNum = confirmJson?.order_number || `LOCAL-${Date.now()}`
+
+      // Then create Stripe session passing the pre_order so Stripe metadata contains the order number
+      const stripePayload = { ...payload, pre_order: orderNum }
+      const res = await fetchWithAuth(`${API_BASE}/api/payments/create_session/`, { method:'POST', headers, body: JSON.stringify(stripePayload) })
       const j = await res.json().catch(()=>null)
       if (res.ok && j?.url){
-        
+        // redirect to Stripe checkout (order already created)
         window.location.href = j.url
         return
       }
-      
-      const fallback = await fetchWithAuth(`${API_BASE}/api/checkout/confirm/`, { method:'POST', headers, body: JSON.stringify(payload) })
-      const fj = await fallback.json().catch(()=>null)
+
+      // If creating Stripe session failed, fallback to local success flow
       clear()
-      navigate(`/checkout/success?order=${encodeURIComponent(fj?.order_number || 'LOCAL-'+Date.now())}`)
+      navigate(`/checkout/success?order=${encodeURIComponent(orderNum)}`)
     }catch{
       clear()
       navigate(`/checkout/success?order=${encodeURIComponent('LOCAL-'+Date.now())}`)

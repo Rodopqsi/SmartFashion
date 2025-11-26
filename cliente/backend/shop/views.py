@@ -794,8 +794,56 @@ def checkout_confirm(request):
                             [order_id, pid, size_id, color_id, qty, meta['price'], meta['price']*qty, meta['name'], meta['image']]
                         )
             except Exception:
-                import time
-                order_number = order_number or f"SF{int(time.time())}"
+                # If insertion failed, attempt a safe fallback insert and log the error.
+                try:
+                    import time, traceback
+                    fallback_num = order_number or f"SF{int(time.time())}"
+                    log_path = os.path.join(os.path.dirname(__file__), 'orders_debug.log')
+                    with open(log_path, 'a', encoding='utf-8') as lf:
+                        lf.write(f"--- {__import__('datetime').datetime.utcnow().isoformat()}Z checkout_confirm insert failed, attempting fallback insert for {fallback_num} ---\n")
+                        lf.write(traceback.format_exc())
+                    # Try to insert minimal order record
+                    try:
+                        with connection.cursor() as cursor:
+                            cursor.execute(
+                                """
+                                INSERT INTO orders (order_number, email, subtotal, igv, total, created_at)
+                                VALUES (%s, %s, %s, %s, %s, NOW())
+                                """,
+                                [fallback_num, user_email, subtotal, igv, total]
+                            )
+                            cursor.execute("SELECT LAST_INSERT_ID()")
+                            order_id = cursor.fetchone()[0]
+                            order_number = fallback_num
+                        # Attempt to insert order_items as best-effort
+                        with connection.cursor() as cursor:
+                            for it in items:
+                                try:
+                                    pid = int(it.get('product_id'))
+                                    qty = max(1, int(it.get('qty', 1)))
+                                    size_id = it.get('size_id')
+                                    color_id = it.get('color_id')
+                                    meta = price_cache.get(pid) or {'price':0.0,'name':f'Producto {pid}','image':None}
+                                    cursor.execute(
+                                        """
+                                        INSERT INTO order_items (order_id, product_id, size_id, color_id, qty, unit_price, amount, name, image)
+                                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                        """,
+                                        [order_id, pid, size_id, color_id, qty, meta['price'], meta['price']*qty, meta['name'], meta['image']]
+                                    )
+                                except Exception:
+                                    # log per-item insert failure but continue
+                                    try:
+                                        with open(log_path, 'a', encoding='utf-8') as lf:
+                                            lf.write(f"item insert failed for order {fallback_num}, product {it.get('product_id')}\n")
+                                    except Exception:
+                                        pass
+                    except Exception:
+                        # If fallback also fails, set a fallback order_number so caller receives something
+                        order_number = fallback_num
+                except Exception:
+                    import time
+                    order_number = order_number or f"SF{int(time.time())}"
         destinatario = request.data.get('destinatario') or request.data.get('nombre')
         telefono_envio = None
         shipping_address = None
@@ -1028,40 +1076,67 @@ def payments_webhook(request):
         email = metadata.get('email') or None
         order_number = metadata.get('order_number') or None
 
-        from rest_framework.test import APIRequestFactory
-        factory = APIRequestFactory()
-        req = factory.post('/api/checkout/confirm/', {
-            'items': items,
-            'address_id': address_id,
-            'userEmail': email,
-            'order_number': order_number,
-        }, format='json')
-        resp = None
+        # If we already have an order_number from the metadata, and the orders table contains it,
+        # skip calling checkout_confirm to avoid duplicate insertion/stock double-decrement.
+        order_already_exists = False
         try:
-            # ensure request has a user attribute (may be None)
+            if order_number:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT id FROM orders WHERE order_number=%s LIMIT 1", [order_number])
+                    if cursor.fetchone():
+                        order_already_exists = True
+                        try:
+                            with open(log_path, 'a', encoding='utf-8') as lf:
+                                import datetime
+                                lf.write(f"--- {datetime.datetime.utcnow().isoformat()}Z Stripe webhook: order {order_number} already exists, skipping checkout_confirm ---\n")
+                        except Exception:
+                            pass
+        except Exception:
+            order_already_exists = False
+
+        resp = None
+        if not order_already_exists:
+            from rest_framework.test import APIRequestFactory
+            factory = APIRequestFactory()
+            req = factory.post('/api/checkout/confirm/', {
+                'items': items,
+                'address_id': address_id,
+                'userEmail': email,
+                'order_number': order_number,
+            }, format='json')
             try:
-                req.user = None
-            except Exception:
-                pass
-            resp = checkout_confirm(req)
-            # log checkout_confirm response status and body for debugging
+                # ensure request has a user attribute (may be None)
+                try:
+                    req.user = None
+                except Exception:
+                    pass
+                resp = checkout_confirm(req)
+                # log checkout_confirm response status and body for debugging
+                try:
+                    with open(log_path, 'a', encoding='utf-8') as lf:
+                        import datetime
+                        lf.write(f"--- {datetime.datetime.utcnow().isoformat()}Z checkout_confirm response ---\n")
+                        lf.write(f"status_code={getattr(resp, 'status_code', 'n/a')}\n")
+                        try:
+                            lf.write(f"data={getattr(resp, 'data', getattr(resp, 'content', 'n/a'))}\n")
+                        except Exception:
+                            lf.write("data=<could not read>\n")
+                except Exception:
+                    pass
+            except Exception as e:
+                resp = None
+                try:
+                    with open(log_path, 'a', encoding='utf-8') as lf:
+                        import datetime
+                        lf.write(f"--- {datetime.datetime.utcnow().isoformat()}Z checkout_confirm threw exception: {str(e)} ---\n")
+                except Exception:
+                    pass
+        else:
+            # create a small log entry so later analysis knows we skipped create
             try:
                 with open(log_path, 'a', encoding='utf-8') as lf:
                     import datetime
-                    lf.write(f"--- {datetime.datetime.utcnow().isoformat()}Z checkout_confirm response ---\n")
-                    lf.write(f"status_code={getattr(resp, 'status_code', 'n/a')}\n")
-                    try:
-                        lf.write(f"data={getattr(resp, 'data', getattr(resp, 'content', 'n/a'))}\n")
-                    except Exception:
-                        lf.write("data=<could not read>\n")
-            except Exception:
-                pass
-        except Exception as e:
-            resp = None
-            try:
-                with open(log_path, 'a', encoding='utf-8') as lf:
-                    import datetime
-                    lf.write(f"--- {datetime.datetime.utcnow().isoformat()}Z checkout_confirm threw exception: {str(e)} ---\n")
+                    lf.write(f"--- {datetime.datetime.utcnow().isoformat()}Z checkout_confirm skipped (already exists) ---\n")
             except Exception:
                 pass
 
