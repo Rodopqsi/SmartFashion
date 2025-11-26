@@ -11,7 +11,9 @@ export default function NavBar(){
   const location = useLocation()
   const [scrolled, setScrolled] = useState(false)
   const [openMenu, setOpenMenu] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const menuRef = useRef(null)
+  const mobileMenuRef = useRef(null)
   const [theme, setTheme] = useState(()=>{
     if (typeof window !== 'undefined') return localStorage.getItem('theme') || 'light'
     return 'light'
@@ -28,6 +30,7 @@ export default function NavBar(){
     const onDocClick = (e) => {
       if (!menuRef.current) return
       if (!menuRef.current.contains(e.target)) setOpenMenu(false)
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target) && !e.target.closest('.mobile-toggle')) setMobileOpen(false)
     }
     const onEsc = (e) => { if (e.key === 'Escape') setOpenMenu(false) }
     document.addEventListener('click', onDocClick)
@@ -141,11 +144,49 @@ export default function NavBar(){
       <Link to="/catalogo" className="nav-link">Categorías</Link>
       </div>
       <div className="nav-right">
+        {/* mobile hamburger */}
+        <button className="icon-btn mobile-toggle" aria-label="Abrir menú" onClick={()=> setMobileOpen(o=>!o)} style={{display:isMobile? 'inline-flex':'none'}}>
+          ☰
+        </button>
+        {mobileOpen && (
+          <div ref={mobileMenuRef} className="mobile-menu" style={{position:'absolute', right:12, top:'64px', minWidth:200, background:'var(--color-bg)', border:'1px solid var(--color-border)', borderRadius:8, padding:12, zIndex:120}}>
+            <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); scrollOrNavigate('new-arrivals') }}>Novedades</button>
+            <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); scrollOrNavigate('collections') }}>Colecciones</button>
+            <Link to="/catalogo" className="dropdown-item" onClick={()=> setMobileOpen(false)}>Categorías</Link>
+            <hr className="dropdown-sep" />
+            {user ? (
+              <>
+                <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); navigate('/perfil') }}>Mi Perfil</button>
+                <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); navigate('/direcciones') }}>Mis Direcciones</button>
+                <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); navigate('/reclamos') }}>Mis Reclamos</button>
+                <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); navigate('/devoluciones') }}>Mis Devoluciones</button>
+                <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); navigate('/favoritos') }}>Mis Favoritos</button>
+                <hr className="dropdown-sep" />
+                <button className="dropdown-item logout" onClick={()=>{ setMobileOpen(false); logout() }}>Cerrar Sesión</button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="dropdown-item" onClick={()=> setMobileOpen(false)}>Iniciar Sesión</Link>
+                <Link to="/register" className="dropdown-item" onClick={()=> setMobileOpen(false)}>Registrarse</Link>
+              </>
+            )}
+          </div>
+        )}
         
         {user ? (
           <div className="user-menu" ref={menuRef} style={{ position:'relative' }}>
-            <button className="icon-btn" onClick={()=>setOpenMenu(o=>!o)} aria-haspopup="menu" aria-expanded={openMenu}>
-              {user.username || user.email}
+            <button
+              className="icon-btn user-toggle"
+              onClick={()=>setOpenMenu(o=>!o)}
+              aria-haspopup="menu"
+              aria-expanded={openMenu}
+              aria-label={user.username || user.email}
+              title={user.username || user.email}
+            >
+              <span className="user-name">{user.username || user.email}</span>
+              <svg className="user-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+                <path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5zm0 2c-4.971 0-9 2.686-9 6v2h18v-2c0-3.314-4.029-6-9-6z"/>
+              </svg>
             </button>
             {openMenu && (
               <div className="dropdown" role="menu">
@@ -161,8 +202,12 @@ export default function NavBar(){
           </div>
         ) : (
           <>
-            <Link to="/login" className="icon-btn" style={{textDecoration:'none'}}>Iniciar Sesión</Link>
-            <Link to="/register" className="icon-btn" style={{textDecoration:'none'}}>Registrarse</Link>
+            {!isMobile && (
+              <>
+                <Link to="/login" className="icon-btn" style={{textDecoration:'none'}}>Iniciar Sesión</Link>
+                <Link to="/register" className="icon-btn" style={{textDecoration:'none'}}>Registrarse</Link>
+              </>
+            )}
           </>
         )}
         <div className="vertical-sep">|</div>

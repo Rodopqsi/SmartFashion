@@ -29,8 +29,8 @@ export default function Footer(){
   }
 
   return (
-    <footer style={footerStyle}>
-      <div style={footerInner}>
+    <footer className="site-footer" style={footerStyle}>
+      <div className="footer-inner" style={footerInner}>
         <div style={colWide}>
           <div style={brand}>SmartFashion</div>
           <p style={muted}>Moda para cada momento. Encuentra colecciones de temporada, ofertas y envíos rápidos.</p>
@@ -72,7 +72,7 @@ export default function Footer(){
           <div style={{...muted, fontSize:12}}>Al suscribirte aceptas nuestras políticas.</div>
         </div>
       </div>
-      <div style={bottomBar}>
+      <div className="bottom-bar" style={bottomBar}>
         <span>© {new Date().getFullYear()} SmartFashion</span>
         <span style={sep}>·</span>
         <a href="#terms" style={mutedLink}>Términos</a>

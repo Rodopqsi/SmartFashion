@@ -41,6 +41,9 @@ html, body { background: var(--color-bg); color: var(--color-text); font-family:
 #nav-bar.scrolled { box-shadow:0 4px 24px rgba(0,0,0,0.12); }
 .nav-left, .nav-center, .nav-right { display:flex; align-items:center; }
 .nav-center { gap:120px; }
+.nav-left .icon-btn { margin-right:8px; }
+.nav-right .icon-btn { margin-left:8px; padding:6px 8px; }
+.vertical-sep { margin:0 8px; }
 .nav-link { text-decoration:none; color:var(--color-text); font-size:18px; font-weight:500; position:relative; }
 .nav-link:hover::after { content:""; position:absolute; left:0; right:0; bottom:-4px; height:2px; background:var(--color-text); }
 .nav-link.highlight { color:var(--color-accent-alt); }
@@ -374,11 +377,66 @@ html.theme-dark .addresses-grid { grid-template-columns: 440px 1fr !important; }
   .shop-now-btn { left:16px; bottom:16px; padding:12px 20px; }
 }
 
+/* Small-screen adjustments to reduce visual clutter */
+@media (max-width: 640px) {
+  /* hide non-essential text labels to give space */
+  #nav-bar .nav-right button[aria-label="Carrito"] span { display:none; }
+  #nav-bar .nav-right .icon-btn { padding:8px; }
+  .vertical-sep { display:none; }
+  /* mobile menu: full width under the navbar */
+  .mobile-menu { position:fixed !important; left:0 !important; right:0 !important; top:var(--nav-height); margin:0 !important; min-width:unset !important; border-radius:0 !important; padding:12px 16px !important; box-shadow:0 12px 36px rgba(2,6,23,0.2); }
+  .mobile-menu .dropdown-item { display:block; width:100%; text-align:left; padding:10px 8px; border-radius:6px }
+}
+
+/* Desktop: subtle spacing improvements for clarity */
+@media (min-width: 901px) {
+  .nav-center { gap:90px; }
+}
+
+/* User icon styling */
+.user-icon { display:none; width:20px; height:20px; color:var(--color-text); margin-left:6px }
+.user-name { display:inline-block; font-weight:600; margin-right:4px }
+.user-toggle { display:inline-flex; align-items:center; justify-content:center; padding:6px 8px; border-radius:8px; gap:6px }
+.user-toggle:hover { background:var(--color-bg-soft); }
+.theme-dark .user-icon { color:var(--color-text); }
+
+@media (max-width: 640px) {
+  /* on small screens, show icon and hide username text */
+  .user-icon { display:block }
+  .user-name { display:none }
+}
+
+@media (max-width: 640px) {
+  /* hide the separate user-toggle button on mobile to avoid duplication with the hamburger menu */
+  .user-toggle { display:none !important; }
+}
+
 
 #nav-bar .nav-right button[aria-label="Carrito"] svg { color: #1C274C; }
 #nav-bar .nav-right button[aria-label="Carrito"] svg path { stroke: currentColor; }
 .theme-dark #nav-bar .nav-right button[aria-label="Carrito"] svg { color: #ffffff; }
 .theme-dark #nav-bar .nav-right button[aria-label="Carrito"] svg path { stroke: currentColor; }
+.mobile-menu { box-shadow:0 8px 28px rgba(2,6,23,0.15); }
+
+/* Footer responsive rules */
+.site-footer { border-top:1px solid var(--color-border); background:var(--color-bg); color:var(--color-text); }
+.site-footer .footer-inner { max-width:1200px; margin:0 auto; padding:32px 20px; display:grid; grid-template-columns:2fr 1fr 1fr 1.4fr; gap:20px }
+.site-footer .bottom-bar { border-top:1px solid var(--color-border); padding:14px 20px; display:flex; gap:10px; align-items:center; justify-content:center; color:var(--color-text-soft) }
+
+@media (max-width: 900px) {
+  .site-footer .footer-inner { grid-template-columns: 1fr 1fr; gap:16px; padding:24px 18px }
+}
+
+@media (max-width: 640px) {
+  .site-footer .footer-inner { grid-template-columns: 1fr !important; padding:18px 14px; gap:12px }
+  .site-footer .brand { font-size:20px }
+  .site-footer .socials { margin-top:4px }
+  .site-footer .bottom-bar { padding:12px 12px; font-size:13px }
+  .site-footer .footer-inner a { display:block }
+  .site-footer .footer-inner .form-row { flex-direction:column }
+  .site-footer .footer-inner .form-row input { width:100% }
+  .site-footer .footer-inner .form-row button { width:100% }
+}
 
 /* Responsive tweaks for Home page: keep styles but adjust layouts for small screens */
 @media (max-width: 900px) {
