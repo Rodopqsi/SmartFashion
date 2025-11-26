@@ -9,6 +9,7 @@ from .views import (
     collection_detail,
     payments_create_session, payments_webhook,
 )
+from .views import user_orders
 from .views import subscribe, notify_collection
 from .views import catalog_snapshot, chat_ai, chat_ai_status
 
@@ -29,6 +30,7 @@ urlpatterns = [
     path('profile/address/default', address_default, name='address-default'),
     path('profile/address/default/set', address_set_default, name='address-set-default'),
     path('orders/<str:order_number>/tracking', order_tracking, name='order-tracking'),
+    path('profile/envios/', user_orders, name='profile-shipments'),
     path('claims/', claims, name='claims'),
     path('claims/<int:pk>/', claim_detail, name='claim-detail'),
     path('returns/', returns, name='returns'),

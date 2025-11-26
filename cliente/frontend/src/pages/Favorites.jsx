@@ -28,7 +28,7 @@ export default function Favorites(){
   }, [items, query, priceRange])
 
   return (
-    <div style={{padding:'2rem', maxWidth:1200, margin:'0 auto'}}>
+    <div style={{padding:'2rem', maxWidth:1200, margin:'0 auto',marginTop:110}}>
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline'}}>
         <div>
           <h2 style={{margin:'0 0 4px'}}>Mis Favoritos</h2>

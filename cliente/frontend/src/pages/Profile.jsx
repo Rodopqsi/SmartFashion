@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import InputFloating from '../components/InputFloating.jsx'
 import { useAuth } from '../auth.jsx'
 import { useToast } from '../toast.jsx'
@@ -20,8 +21,13 @@ export default function Profile(){
   const [verifyEmail, setVerifyEmail] = useState({ email: '', code: '' })
   const [pwdForm, setPwdForm] = useState({ current_password: '', new_password: '', confirm: '', code: '' })
   const [sessions, setSessions] = useState([])
-  const [tab, setTab] = useState('datos') 
+  const location = useLocation()
+  const qs = typeof location?.search === 'string' ? new URLSearchParams(location.search) : new URLSearchParams('')
+  const initialTab = qs.get('tab') || 'datos'
+  const [tab, setTab] = useState(initialTab)
   const access = tokens?.access
+  const [orders, setOrders] = useState([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
 
   const authHeaders = access ? { 'Authorization': `Bearer ${access}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
 
@@ -122,6 +128,28 @@ export default function Profile(){
     else { toast?.push(j.detail || 'No se pudieron cerrar las sesiones','error') }
   }
 
+  const loadOrders = async ()=>{
+    setOrdersLoading(true)
+    try{
+      const r = await (fetchWithAuth?.(`${apiBase}/shop/profile/envios/`) || fetch(`${apiBase}/shop/profile/envios/`, { headers: authHeaders }))
+      const j = await r.json().catch(()=>({}))
+      if (r.ok){ setOrders(Array.isArray(j.data) ? j.data : []) }
+      else { toast?.push(j.detail || 'No se pudieron cargar los pedidos','error') }
+    }catch(e){ toast?.push('Error al cargar pedidos','error') }
+    finally{ setOrdersLoading(false) }
+  }
+
+  const requestReturn = async (order_number)=>{
+    if (!confirm(`Solicitar devolución/reembolso para el pedido ${order_number}?`)) return
+    const body = { order_number, motivo: 'otro', metodo: 'reembolso' }
+    try{
+      const r = await (fetchWithAuth?.(`${apiBase}/shop/returns/`, { method:'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(body) }) || fetch(`${apiBase}/shop/returns/`, { method:'POST', headers: authHeaders, body: JSON.stringify(body) }))
+      const j = await r.json().catch(()=>({}))
+      if (r.ok){ toast?.push('Solicitud de devolución enviada','success'); loadOrders() }
+      else { toast?.push(j.detail || 'No se pudo solicitar devolución','error') }
+    }catch(e){ toast?.push('Error al solicitar devolución','error') }
+  }
+
   return (
     <div className="profile-root">
       <h2>Mi Perfil</h2>
@@ -133,6 +161,7 @@ export default function Profile(){
             <button onClick={()=>setTab('correos')} className={`tab-btn ${tab==='correos' ? 'active' : ''}`}>Correos</button>
             <button onClick={()=>setTab('password')} className={`tab-btn ${tab==='password' ? 'active' : ''}`}>Contraseña</button>
             <button onClick={()=>setTab('sesiones')} className={`tab-btn ${tab==='sesiones' ? 'active' : ''}`}>Sesiones</button>
+            <button onClick={()=>{ setTab('envios'); if(!orders.length) loadOrders() }} className={`tab-btn ${tab==='envios' ? 'active' : ''}`}>Envíos</button>
           </div>
 
           {}
@@ -250,6 +279,64 @@ export default function Profile(){
               ))}
               {!sessions.length && <div style={{color:'var(--color-text-soft)'}}>No hay sesiones listadas (usa Refrescar).</div>}
             </div>
+          </section>
+          )}
+          {tab==='envios' && (
+          <section className="profile-card">
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+              <h3 className="profile-sec-title">Envíos y pedidos</h3>
+              <div style={{display:'flex', gap:8}}>
+                <button onClick={loadOrders} className="btn-small">Refrescar</button>
+              </div>
+            </div>
+            {ordersLoading ? <div>Cargando envíos...</div> : (
+              <div style={{display:'grid', gap:12}}>
+                {orders.length === 0 && <div style={{color:'var(--color-text-soft)'}}>No hay pedidos para mostrar.</div>}
+                {orders.map(o => (
+                  <div key={o.order_number} className="order-row" style={{border:'1px solid var(--color-border)', padding:12, borderRadius:10, background:'var(--color-surface)'}}>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                      <div>
+                        <div style={{fontWeight:700}}>Pedido {o.order_number}</div>
+                        <div style={{fontSize:12, color:'var(--color-text-soft)'}}>Creado: {o.created_at || '—'}</div>
+                        <div style={{fontSize:13}}>Total: {o.total}</div>
+                      </div>
+                      <div style={{display:'flex', gap:8}}>
+                        <button onClick={()=>requestReturn(o.order_number)} className="btn-small">Solicitar devolución</button>
+                        <a className="btn-small" href={`/tracking/${o.order_number}`} target="_blank" rel="noreferrer">Seguimiento</a>
+                      </div>
+                    </div>
+                    <div style={{marginTop:8}}>
+                      <div style={{fontSize:13, fontWeight:600}}>Dirección de envío</div>
+                      {o.envio ? (
+                        <div style={{fontSize:13}}>
+                          <div>{o.envio.destinatario}</div>
+                          <div>{o.envio.direccion} · {o.envio.region}</div>
+                          <div style={{fontSize:12, color:'var(--color-text-soft)'}}>Tel: {o.envio.telefono || '—'}</div>
+                          <div style={{fontSize:12, color:'var(--color-text-soft)'}}>Estado: {o.envio.status || '—'}</div>
+                        </div>
+                      ) : (
+                        <div style={{fontSize:13, color:'var(--color-text-soft)'}}>No hay información de envío disponible.</div>
+                      )}
+                    </div>
+                    <div style={{marginTop:8}}>
+                      <div style={{fontSize:13, fontWeight:600}}>Items</div>
+                      <div style={{display:'grid', gap:6, marginTop:6}}>
+                        {o.items.map(it => (
+                          <div key={`${o.order_number}-${it.product_id}-${it.size_id || 's'}`} style={{display:'flex', gap:10, alignItems:'center'}}>
+                            <img src={it.image || '/img/no-image.png'} alt={it.name} style={{width:48, height:48, objectFit:'cover', borderRadius:6}} />
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:13, fontWeight:600}}>{it.name}</div>
+                              <div style={{fontSize:12, color:'var(--color-text-soft)'}}>x{it.qty} · {it.size_id ? `Talla ${it.size_id}` : ''}</div>
+                            </div>
+                            <div style={{fontWeight:700}}>{it.amount}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
           )}
           

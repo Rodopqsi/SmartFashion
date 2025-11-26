@@ -866,6 +866,10 @@ def checkout_confirm(request):
             headers = {'Content-Type': 'application/json'}
             if webhook_secret:
                 headers['X-Webhook-Token'] = webhook_secret
+            # Also include INTERNAL_TOKEN for admin internal endpoints if present
+            internal_token = os.getenv('INTERNAL_TOKEN', '')
+            if internal_token:
+                headers['X-Internal-Token'] = internal_token
             r = requests.post(f"{admin_url}/api/internal/orders", json=payload, headers=headers, timeout=6)
             webhook_status = r.status_code
             if r.ok:
@@ -988,10 +992,26 @@ def payments_webhook(request):
     payload = request.body
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
     endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET', '')
-    if not endpoint_secret:
-        return Response(status=200)
+    log_path = os.path.join(os.path.dirname(__file__), 'webhook_debug.log')
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        if not endpoint_secret:
+            try:
+                with open(log_path, 'a', encoding='utf-8') as lf:
+                    import datetime
+                    lf.write(f"--- {datetime.datetime.utcnow().isoformat()}Z Stripe webhook WARNING: missing STRIPE_WEBHOOK_SECRET ---\n")
+            except Exception:
+                pass
+            return Response(status=200)
+        try:
+            event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        except Exception as e:
+            try:
+                with open(log_path, 'a', encoding='utf-8') as lf:
+                    import datetime
+                    lf.write(f"--- {datetime.datetime.utcnow().isoformat()}Z Stripe webhook construct_event failed: {str(e)} ---\n")
+            except Exception:
+                pass
+            return Response(status=400)
     except Exception:
         return Response(status=400)
 
@@ -1016,10 +1036,34 @@ def payments_webhook(request):
             'userEmail': email,
             'order_number': order_number,
         }, format='json')
+        resp = None
         try:
+            # ensure request has a user attribute (may be None)
+            try:
+                req.user = None
+            except Exception:
+                pass
             resp = checkout_confirm(req)
-        except Exception:
+            # log checkout_confirm response status and body for debugging
+            try:
+                with open(log_path, 'a', encoding='utf-8') as lf:
+                    import datetime
+                    lf.write(f"--- {datetime.datetime.utcnow().isoformat()}Z checkout_confirm response ---\n")
+                    lf.write(f"status_code={getattr(resp, 'status_code', 'n/a')}\n")
+                    try:
+                        lf.write(f"data={getattr(resp, 'data', getattr(resp, 'content', 'n/a'))}\n")
+                    except Exception:
+                        lf.write("data=<could not read>\n")
+            except Exception:
+                pass
+        except Exception as e:
             resp = None
+            try:
+                with open(log_path, 'a', encoding='utf-8') as lf:
+                    import datetime
+                    lf.write(f"--- {datetime.datetime.utcnow().isoformat()}Z checkout_confirm threw exception: {str(e)} ---\n")
+            except Exception:
+                pass
 
         try:
             user_email = email
@@ -1086,6 +1130,10 @@ def payments_webhook(request):
             headers = {'Content-Type': 'application/json'}
             if webhook_secret:
                 headers['X-Webhook-Token'] = webhook_secret
+            # Also include INTERNAL_TOKEN for admin internal endpoints if present
+            internal_token = os.getenv('INTERNAL_TOKEN', '')
+            if internal_token:
+                headers['X-Internal-Token'] = internal_token
 
             try:
                 log_path = os.path.join(os.path.dirname(__file__), 'webhook_debug.log')
@@ -1347,6 +1395,94 @@ def order_tracking(request, order_number: str):
     admin_url = os.getenv('ADMIN_URL', 'http://localhost:8081')
     url = f"{admin_url}/tracking/{order_number}"
     return Response({'status': 'ok', 'tracking_url': url})
+
+
+@api_view(['GET'])
+def user_orders(request):
+    """Return orders for the current user (or by email param).
+    Response: { status: 'ok', data: [ { order_number, created_at, subtotal, igv, total, items: [...], envio: {...} } ] }
+    """
+    email = _get_user_email(request)
+    if not email:
+        return Response({'status': 'invalid', 'message': 'email requerido'}, status=status.HTTP_400_BAD_REQUEST)
+
+    orders = []
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, order_number, subtotal, igv, total, created_at
+            FROM orders
+            WHERE email=%s
+            ORDER BY id DESC
+            LIMIT 200
+            """,
+            [email]
+        )
+        rows = cursor.fetchall()
+
+    for r in rows:
+        order_id = r[0]
+        order_number = r[1]
+        subtotal = float(r[2] or 0)
+        igv = float(r[3] or 0)
+        total = float(r[4] or 0)
+        created_at = r[5].isoformat() if r[5] else None
+
+        items = []
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT product_id, name, image, qty, size_id, color_id, amount
+                FROM order_items
+                WHERE order_id=%s
+                """,
+                [order_id]
+            )
+            it_rows = cursor.fetchall()
+        for it in it_rows:
+            items.append({
+                'product_id': it[0], 'name': it[1], 'image': it[2], 'qty': int(it[3] or 0),
+                'size_id': it[4], 'color_id': it[5], 'amount': float(it[6] or 0)
+            })
+
+        envio = None
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT destinatario, direccion, region_destino, email_destino, telefono_destino, status, creado_en
+                    FROM Envio
+                    WHERE order_id=%s
+                    LIMIT 1
+                    """,
+                    [order_id]
+                )
+                e = cursor.fetchone()
+            if not e:
+                # fallback: some code paths stored order_number into Envio.order_id
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT destinatario, direccion, region_destino, email_destino, telefono_destino, status, creado_en FROM Envio WHERE order_id=%s LIMIT 1", [order_number])
+                    e = cursor.fetchone()
+            if e:
+                envio = {
+                    'destinatario': e[0], 'direccion': e[1], 'region': e[2], 'email': e[3], 'telefono': e[4],
+                    'status': e[5], 'created_at': e[6].isoformat() if e[6] else None
+                }
+        except Exception:
+            envio = None
+
+        orders.append({
+            'order_id': order_id,
+            'order_number': order_number,
+            'created_at': created_at,
+            'subtotal': subtotal,
+            'igv': igv,
+            'total': total,
+            'items': items,
+            'envio': envio,
+        })
+
+    return Response({'status': 'ok', 'data': orders})
 
 
 @api_view(['GET'])
