@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.core.env.Environment;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -15,8 +16,12 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 public class SecurityConfig {
+    private final Environment env;
 
-    
+    public SecurityConfig(Environment env) {
+        this.env = env;
+    }
+
     @Bean
     public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
         UserDetails admin = User
@@ -34,14 +39,20 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/css/**", "/admin/login", "/error", "/sso/login", "/ping", "/tracking/**").permitAll()
+        boolean allowPublicAdmin = Boolean.parseBoolean(env.getProperty("ADMIN_ALLOW_PUBLIC", "false"));
 
-                .requestMatchers("/api/internal/**").permitAll()
-                .requestMatchers("/admin/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            )
+        http
+            .authorizeHttpRequests(auth -> {
+                auth.requestMatchers("/css/**", "/admin/login", "/error", "/sso/login", "/ping", "/tracking/**").permitAll();
+                auth.requestMatchers("/api/internal/**").permitAll();
+                if (allowPublicAdmin) {
+                    // Temporary debug mode: allow public access to admin UI
+                    auth.requestMatchers("/admin/**").permitAll();
+                } else {
+                    auth.requestMatchers("/admin/**").hasRole("ADMIN");
+                }
+                auth.anyRequest().authenticated();
+            })
 
             .formLogin(login -> login
                 .loginPage("/admin/login")

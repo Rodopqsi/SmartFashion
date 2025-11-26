@@ -10,17 +10,19 @@ export default function Catalog() {
   const navigate = useNavigate()
   const location = useLocation()
   const { isFavorite, toggleFavorite } = useFavorites() || {}
-  
+  // Remote data
   const [data, setData] = useState(null)
+  const STATIC_SIZES = ['XS', 'S', 'M', 'L', 'XL']
   const [sizes, setSizes] = useState([])
+  const [snapshotRaw, setSnapshotRaw] = useState(null)
+  const [snapshotById, setSnapshotById] = useState({})
   const [colors, setColors] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  
+  // Filters/search
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [query, setQuery] = useState('')
-  
   const [selectedSize, setSelectedSize] = useState(null)
   const [selectedColor, setSelectedColor] = useState(null)
   const [priceRange, setPriceRange] = useState('all')
@@ -43,12 +45,10 @@ export default function Catalog() {
       .catch(err => { console.error(err); setError('No se pudo cargar el catálogo'); setLoading(false) })
   }
 
-  
   useEffect(() => {
     fetchHome(selectedCategory, query, selectedSize, selectedColor, page, limit)
   }, [selectedCategory, selectedSize, selectedColor, page, limit])
 
-  
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
@@ -58,30 +58,28 @@ export default function Catalog() {
     return () => clearTimeout(debounceRef.current)
   }, [query])
 
-  
   useEffect(() => {
     const qParam = new URLSearchParams(location.search).get('q') || ''
     setQuery(qParam)
     setPage(1)
   }, [location.search])
 
-  
   useEffect(() => {
     fetch(`${API_BASE}/api/sizes/`).then(r => r.json()).then(j => setSizes(j.data || [])).catch(() => {})
     fetch(`${API_BASE}/api/colors/`).then(r => r.json()).then(j => setColors(j.data || [])).catch(() => {})
+    // fetch catalog snapshot as lightweight source of variants for product cards
+    fetch(`${API_BASE}/api/catalog_snapshot/`).then(r => r.json()).then(j => setSnapshotRaw(j.data || null)).catch(() => {})
   }, [])
 
-  
   useEffect(() => {
     const handleImages = () => {
       const imgs = document.querySelectorAll('.products-grid img')
       imgs.forEach(img => {
-        
         if (!img.classList.contains('loading')) img.classList.add('loading')
         const onLoad = () => { img.classList.remove('loading'); cleanup() }
         const onError = () => {
           const svg = encodeURIComponent(
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" role="img" aria-label="Imagen no disponible">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">' +
             '<rect width="100%" height="100%" fill="%230f1115"/>' +
             '<text x="50%" y="50%" fill="%23a0a0a0" font-size="16" font-family="Inter, Arial" text-anchor="middle" alignment-baseline="middle">Imagen no disponible</text>' +
             '</svg>'
@@ -96,13 +94,11 @@ export default function Catalog() {
         }
         img.addEventListener('load', onLoad)
         img.addEventListener('error', onError)
-        
         if (img.complete && img.naturalWidth === 0) {
           onError()
         }
       })
     }
-    
     handleImages()
     const t = setTimeout(handleImages, 300)
     return () => clearTimeout(t)
@@ -115,18 +111,147 @@ export default function Catalog() {
   const startIdx = pagination.total ? ((pagination.page || page) - 1) * (pagination.limit || limit) + 1 : 0
   const endIdx = pagination.total ? Math.min(pagination.total, startIdx + (allProducts?.length || 0) - 1) : 0
 
-  
   const products = useMemo(() => {
-    if (!allProducts?.length) return []
-    if (priceRange === 'all') return allProducts
-    const inRange = (price) => {
-      if (priceRange === '0-100') return price >= 0 && price <= 100
-      if (priceRange === '100-200') return price > 100 && price <= 200
-      if (priceRange === '200+') return price > 200
-      return true
+    try {
+      console.debug('Catalog useMemo start', { allProductsLen: allProducts?.length, priceRange })
+      if (!allProducts?.length) return []
+      if (priceRange === 'all') return allProducts
+      const inRange = (price) => {
+        if (priceRange === '0-100') return price >= 0 && price <= 100
+        if (priceRange === '100-200') return price > 100 && price <= 200
+        if (priceRange === '200+') return price > 200
+        return true
+      }
+      return allProducts.filter(p => inRange(Number(p.precio)))
+    } catch (err) {
+      console.error('products useMemo error', err)
+      return []
     }
-    return allProducts.filter(p => inRange(Number(p.precio)))
   }, [allProducts, priceRange])
+
+  const sizeMap = useMemo(() => {
+    try {
+      const m = new Map()
+      (sizes || []).forEach(s => {
+        if (s && s.id != null) m.set(String(s.id), s.nombre || s.name || String(s.id))
+      })
+      return m
+    } catch (err) {
+      console.error('sizeMap useMemo error', err)
+      return new Map()
+    }
+  }, [sizes])
+
+  // Build a map productId -> [size names] from catalog snapshot + sizes lookup
+  useEffect(() => {
+    try {
+      if (!snapshotRaw || !Array.isArray(snapshotRaw.products)) {
+        setSnapshotById({})
+        return
+      }
+      const byId = {}
+      const localSizeLookup = {}
+      (sizes || []).forEach(s => { if (s && s.id != null) localSizeLookup[String(s.id)] = s.nombre || s.name })
+      snapshotRaw.products.forEach(p => {
+        try {
+          const vs = (p.variantes || [])
+          const found = []
+          vs.forEach(v => {
+            const sid = v.talla_id ?? v.size_id ?? v.tallaId ?? null
+            if (sid != null) {
+              const name = localSizeLookup[String(sid)] || sizeMap.get(String(sid)) || String(sid)
+              if (name && !found.includes(name)) found.push(name)
+            }
+          })
+          if (found.length) byId[String(p.id)] = found
+        } catch (e) {
+          // ignore per-product errors
+        }
+      })
+      setSnapshotById(byId)
+    } catch (e) {
+      console.error('snapshotById build error', e)
+      setSnapshotById({})
+    }
+  }, [snapshotRaw, sizes, sizeMap])
+
+  const getSizesForProduct = (prod) => {
+    const out = []
+    if (!prod) return out
+
+    // Helper to push unique non-empty values
+    const pushVal = (v) => {
+      if (v == null) return
+      const str = String(v)
+      if (!str || str === 'undefined' || str === 'null') return
+      if (!out.includes(str)) out.push(str)
+    }
+
+    // 1) Variants: try to read explicit name or id -> map to name
+    if (Array.isArray(prod.variants) && prod.variants.length) {
+      prod.variants.forEach(v => {
+        // try variant size label fields
+        const cand = v.size?.nombre ?? v.size?.name ?? v.size_nombre ?? v.size_name ?? v.size
+        if (cand != null) {
+          pushVal(cand)
+          return
+        }
+        // fallback to id lookup
+        const id = v.size_id ?? (v.size && (typeof v.size === 'number' || typeof v.size === 'string') ? v.size : null) 
+        if (id != null) {
+          const mapped = sizeMap.get(String(id)) || id
+          pushVal(mapped)
+        }
+      })
+    }
+
+    // 2) prod.sizes may be array of objects or ids
+    if (Array.isArray(prod.sizes) && prod.sizes.length) {
+      prod.sizes.forEach(s => {
+        if (s == null) return
+        if (typeof s === 'object') pushVal(s.nombre ?? s.name ?? s.id ?? JSON.stringify(s))
+        else pushVal(s)
+      })
+    }
+
+    // 3) available_sizes similar
+    if (Array.isArray(prod.available_sizes) && prod.available_sizes.length) {
+      prod.available_sizes.forEach(s => {
+        if (s == null) return
+        if (typeof s === 'object') pushVal(s.nombre ?? s.name ?? s.id ?? JSON.stringify(s))
+        else pushVal(s)
+      })
+    }
+
+    // 4) single size field
+    if (prod.size) {
+      const s = prod.size
+      if (typeof s === 'object') pushVal(s.nombre ?? s.name ?? s.id ?? JSON.stringify(s))
+      else pushVal(s)
+    }
+
+    // 5) if still empty, try to infer from variant keys
+    if (!out.length && Array.isArray(prod.variants) && prod.variants.length) {
+      // try reading any property that looks like a size name
+      prod.variants.forEach(v => {
+        Object.keys(v).forEach(k => {
+          if (/size|talla|nombre/i.test(k) && v[k]) pushVal(v[k])
+        })
+      })
+    }
+
+    if (!out.length) {
+      // fallback: try snapshot map (server-side precomputed variants)
+      const snap = snapshotById && snapshotById[String(prod.id)]
+      if (snap && Array.isArray(snap) && snap.length) {
+        snap.forEach(s => pushVal(s))
+      } else {
+        console.debug('getSizesForProduct: no sizes found for product', { id: prod.id, keys: Object.keys(prod), sampleVariant: (prod.variants && prod.variants[0]) || (prod.variantes && prod.variantes[0]) || null })
+      }
+    }
+
+    return out
+  }
 
   const clearAll = () => {
     setSelectedCategory(null)
@@ -149,8 +274,7 @@ export default function Catalog() {
         </div>
       </div>
 
-          <div className="catalog-layout">
-        {}
+      <div className="catalog-layout">
         <aside style={leftColStyle}>
           <div className="filters-group" style={filtersGroup}>
             <div style={filtersTitle}>Filtros</div>
@@ -192,47 +316,51 @@ export default function Catalog() {
           </div>
         </aside>
 
-        {}
         <main style={rightColStyle}>
           {loading && !data && <div style={{ padding: 20 }}>Cargando...</div>}
           {error && <div style={{ padding: 20, color: 'red' }}>{error}</div>}
           {!loading && !error && (
             <div className="products-grid">
-              {products.map(p => (
-                <Link key={p.id} to={`/producto/${p.id}`} state={{ product: p }} style={{ textDecoration:'none', color:'inherit', position:'relative' }}>
-                  <article className="product-card" style={cardStyle}>
-                    <button
-                      title={isFavorite?.(p.id) ? 'Quitar de favoritos' : 'Añadir a favoritos'}
-                      onClick={(e)=>{ e.preventDefault(); toggleFavorite && toggleFavorite(p) }}
-                      style={{ position:'absolute', right:10, top:10, zIndex:2, width:28, height:28, borderRadius:'50%', border:'1px solid #eee', background:'#fff', cursor:'pointer' }}
-                    >
-                      {isFavorite?.(p.id) ? '❤️' : '🤍'}
-                    </button>
-                    {p.image_preview ? (
-                      <img className="product-card-img" src={p.image_preview} alt={p.nombre} style={cardImg} />
-                    ) : (
-                      <div className="product-card-img-fallback" style={cardImgFallback} />
-                    )}
-                    <div className="product-card-body" style={cardBody}>
-                      <div className="product-card-title" style={cardTitle}>{p.nombre}</div>
-                      <div className="product-card-price-row" style={cardPriceRow}>
-                        <span className="product-card-price" style={cardPrice}>S/ {Number(p.precio).toFixed(2)}</span>
-                        {p.precio_descuento && (
-                          <span className="product-card-price-discount" style={cardPriceDiscount}>S/ {Number(p.precio_descuento).toFixed(2)}</span>
-                        )}
+              {products.map(p => {
+                const sizesForThis = getSizesForProduct(p)
+                const displaySizes = (sizesForThis && sizesForThis.length) ? sizesForThis.slice(0,8) : STATIC_SIZES
+                return (
+                  <Link key={p.id} to={`/producto/${p.id}`} state={{ product: { ...p, sizes: sizesForThis } }} style={{ textDecoration:'none', color:'inherit', position:'relative' }}>
+                    <article className="product-card" style={cardStyle}>
+                      <button
+                                title={(typeof isFavorite === 'function' && isFavorite(p.id)) ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+                        onClick={(e)=>{ e.preventDefault(); toggleFavorite && toggleFavorite(p) }}
+                        style={{ position:'absolute', right:10, top:10, zIndex:2, width:28, height:28, borderRadius:'50%', border:'1px solid #eee', background:'#fff', cursor:'pointer' }}
+                      >
+                                {(typeof isFavorite === 'function' && isFavorite(p.id)) ? '❤️' : '🤍'}
+                      </button>
+                      {p.image_preview ? (
+                        <img className="product-card-img" src={p.image_preview} alt={p.nombre} style={cardImg} />
+                      ) : (
+                        <div className="product-card-img-fallback" style={cardImgFallback} />
+                      )}
+                      <div className="product-card-body" style={cardBody}>
+                        <div className="product-card-title" style={cardTitle}>{p.nombre}</div>
+                        <div className="product-card-price-row" style={cardPriceRow}>
+                          <span className="product-card-price" style={cardPrice}>S/ {Number(p.precio).toFixed(2)}</span>
+                          {p.precio_descuento && (
+                            <span className="product-card-price-discount" style={cardPriceDiscount}>S/ {Number(p.precio_descuento).toFixed(2)}</span>
+                          )}
+                        </div>
+                        <div className="product-card-meta" style={cardMeta}>
+                          <span className="small-sizes">{displaySizes.join(', ')}</span>
+                        </div>
+                        <button style={addBtn} title="Elegir variantes" onClick={(e)=>{e.preventDefault(); navigate(`/producto/${p.id}`, { state: { product: p } })}} >+</button>
                       </div>
-                      <div className="product-card-meta" style={cardMeta}>S, M, L, XL</div>
-                      <button style={addBtn} title="Elegir variantes" onClick={(e)=>{e.preventDefault(); navigate(`/producto/${p.id}`, { state: { product: p } })}} >+</button>
-                    </div>
-                  </article>
-                </Link>
-              ))}
+                    </article>
+                  </Link>
+                )
+              })}
               {!products.length && (
                 <div style={{ gridColumn: '1 / -1', color: '#666' }}>No hay productos para los filtros actuales.</div>
               )}
             </div>
           )}
-          {}
           {!loading && !error && (
             <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:12, marginTop:16}}>
               <button
@@ -259,7 +387,6 @@ function Chip({ active, onClick, children }) {
     <button className={`chip ${active ? 'active' : ''}`} onClick={onClick}>{children}</button>
   )
 }
-
 
 const pageStyle = { maxWidth: 1200, margin: '0 auto', padding: '16px 20px', paddingTop: 'calc(var(--nav-height) + 12px)', fontFamily: 'Inter, system-ui, Arial' }
 const topBarStyle = { display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }

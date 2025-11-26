@@ -58,7 +58,7 @@ export default function Collection(){
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: 16, marginTop: 110 }}>
       {col?.image_url && (
-        <div style={{ borderRadius: 12, overflow:'hidden', marginBottom: 16 }}>
+        <div className="collection-hero" style={{ borderRadius: 12, overflow:'hidden', marginBottom: 16 }}>
           <img src={col.image_url} alt={col.nombre} style={{ width:'100%', height: 360, objectFit:'cover', display:'block' }} />
         </div>
       )}
@@ -68,7 +68,7 @@ export default function Collection(){
       </div>
 
       {}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(5, minmax(140px, 1fr))', gap: 10, margin: '12px 0' }}>
+      <div className="filters-grid">
         <InputSelectFloating label="Talla" value={filters.size} onChange={e => applyFilters({ size: e.target.value })}>
           <option value=""></option>
           {available.sizes?.map(s => (
@@ -90,25 +90,25 @@ export default function Collection(){
       {loading && page === 1 && <div style={{ padding:10 }}>Cargando...</div>}
       {error && <div style={{ padding:10, color:'red' }}>{error}</div>}
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap: 14, marginTop: 8 }}>
+      <div className="products-grid">
         {accum.map(p => (
           <Link key={p.id} to={`/producto/${p.id}`} state={{ product: p }} style={{ textDecoration:'none', color:'inherit' }}>
-            <article style={{ border:'1px solid #eee', borderRadius: 10, overflow:'hidden', background:'#fff' }}>
-              {p.image_preview ? (
-                <img src={p.image_preview} alt={p.nombre} style={{ width:'100%', height: 160, objectFit:'cover' }} />
-              ) : (
-                <div style={{ width:'100%', height:160, background:'#f5f5f5' }} />
-              )}
-              <div style={{ padding: 10 }}>
-                <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 14 }}>{p.nombre}</div>
-                <div style={{ display:'flex', gap:8, alignItems:'baseline' }}>
-                  <span style={{ fontSize: 16, fontWeight: 800 }}>S/ {Number(p.precio).toFixed(2)}</span>
-                  {p.precio_descuento && (
-                    <span style={{ fontSize: 13, color:'#16a34a' }}>S/ {Number(p.precio_descuento).toFixed(2)}</span>
-                  )}
+            <article className="product-card">
+                {p.image_preview ? (
+                  <img src={p.image_preview} alt={p.nombre} style={{ width:'100%', height: 160, objectFit:'cover' }} />
+                ) : (
+                  <div className="product-card-img-fallback" style={{ height:160 }} />
+                )}
+                <div className="product-card-body">
+                  <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 14 }}>{p.nombre}</div>
+                  <div style={{ display:'flex', gap:8, alignItems:'baseline' }}>
+                    <span style={{ fontSize: 16, fontWeight: 800 }}>S/ {Number(p.precio).toFixed(2)}</span>
+                    {p.precio_descuento && (
+                      <span className="product-card-price-discount">S/ {Number(p.precio_descuento).toFixed(2)}</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </article>
+              </article>
           </Link>
         ))}
       </div>

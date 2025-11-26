@@ -161,7 +161,7 @@ export default function ProductDetail(){
         <Link to="/catalogo">← Volver al catálogo</Link>
       </nav>
 
-      <section style={{display:'grid', gridTemplateColumns:'520px 1fr', gap:24}}>
+      <section className="product-grid" style={{/* legacy inline kept for desktop fallback */}}>
         {}
         <div className="product-gallery">
           <div className="main-image-wrapper" style={{borderRadius:12, overflow:'hidden'}}>
@@ -266,6 +266,7 @@ export default function ProductDetail(){
                   </div>
                 )}
                 <button
+                  className="add-to-cart"
                   onClick={()=>{
                     if (selectedStock===null){
                       if (!selectedSize && !selectedColor) setVariantWarning('Por favor selecciona talla y color');
