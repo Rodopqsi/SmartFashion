@@ -1,7 +1,33 @@
 import { Link } from 'react-router-dom'
+import React, { useState } from 'react'
 import '../pages/Home.css'
 
 export default function Footer(){
+  const rawBase = (import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000')
+  const apiBase = rawBase.endsWith('/api') ? rawBase : `${rawBase.replace(/\/+$/, '')}/api`
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState(null)
+
+  const submit = async (e)=>{
+    e.preventDefault()
+    if (!email) return
+    setLoading(true)
+    setMsg(null)
+    try{
+      const res = await fetch(`${apiBase}/shop/subscribe/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
+      const j = await res.json().catch(()=>({}))
+      if (res.ok){
+        setMsg('Gracias, te hemos añadido a la lista de suscriptores.')
+        setEmail('')
+      } else {
+        setMsg(j.message || j.detail || 'No se pudo suscribir')
+      }
+    }catch(err){
+      setMsg('Error de conexión')
+    }finally{ setLoading(false) }
+  }
+
   return (
     <footer style={footerStyle}>
       <div style={footerInner}>
@@ -38,10 +64,11 @@ export default function Footer(){
         <div style={col}>
           <div style={colTitle}>Suscríbete</div>
           <p style={muted}>Recibe noticias, lanzamientos y promociones.</p>
-          <form onSubmit={(e)=>{e.preventDefault(); /* TODO: hook newsletter */}} style={formRow}>
-            <input type="email" placeholder="Tu email" required style={emailInput} />
-            <button type="submit" style={btnPrimary}>Unirme</button>
+          <form onSubmit={submit} style={formRow}>
+            <input value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder="Tu email" required style={emailInput} />
+            <button type="submit" disabled={loading} style={btnPrimary}>{loading? '...' : 'Unirme'}</button>
           </form>
+          {msg && <div style={{marginTop:8, color:'#0f172a'}}>{msg}</div>}
           <div style={{...muted, fontSize:12}}>Al suscribirte aceptas nuestras políticas.</div>
         </div>
       </div>

@@ -5,6 +5,8 @@ from shop import auth_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('shop.urls')),
+    # Backwards-compatible prefix: some frontend code posts to /api/shop/...
+    path('api/shop/', include('shop.urls')),
     path('api/auth/register/', auth_views.register, name='register'),
     path('api/auth/register/verify/', auth_views.verify_email, name='verify_email'),
     path('api/auth/google/', auth_views.google_oauth, name='google_oauth'),

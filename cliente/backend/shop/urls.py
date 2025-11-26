@@ -9,6 +9,7 @@ from .views import (
     collection_detail,
     payments_create_session, payments_webhook,
 )
+from .views import subscribe, notify_collection
 from .views import catalog_snapshot, chat_ai, chat_ai_status
 
 urlpatterns = [
@@ -34,6 +35,8 @@ urlpatterns = [
     path('returns/<int:pk>/', return_detail, name='return-detail'),
     path('collections/<slug:slug>/', collection_detail, name='collection-detail'),
     path('catalog/snapshot/', catalog_snapshot, name='catalog-snapshot'),
+    path('subscribe/', subscribe, name='subscribe'),
+    path('notify_collection/<int:col_id>/', notify_collection, name='notify-collection'),
     path('chat/ai/', chat_ai, name='chat-ai'),
     path('chat/ai/status/', chat_ai_status, name='chat-ai-status'),
 ]

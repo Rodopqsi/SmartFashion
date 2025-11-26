@@ -6,7 +6,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import CategoriaSerializer, ProductoCardSerializer, ColeccionSerializer
 from .catalog_snapshot import load_snapshot, export_snapshot
-from .models import Complaint, ReturnRequest
+from .models import Complaint, ReturnRequest, Coleccion
+import os
+from django.core.mail import EmailMultiAlternatives
+from django.conf import settings
+import json
+from pathlib import Path
 from django.db import transaction
 
 
@@ -1146,6 +1151,78 @@ def catalog_snapshot(request):
         export_snapshot()
         snap = load_snapshot() or {}
     return Response({'status': 'ok', 'data': snap})
+
+
+@api_view(['POST'])
+def subscribe(request):
+    """Register an email subscription. Body: { email: 'user@example.com', name?: 'Nombre' }
+    Returns 201 when created, 200 when already subscribed.
+    """
+    body = request.data or {}
+    email = (body.get('email') or request.GET.get('email') or '').strip()
+    name = body.get('name') or None
+    if not email or '@' not in email:
+        return Response({'status': 'invalid', 'message': 'email inválido'}, status=status.HTTP_400_BAD_REQUEST)
+    # Store subscriber in a simple JSON file to avoid DB migrations.
+    try:
+        subs_file = Path(__file__).resolve().parent / 'subscribers.json'
+        if subs_file.exists():
+            data = json.loads(subs_file.read_text(encoding='utf-8') or '[]')
+        else:
+            data = []
+        email_l = email.lower()
+        exists = any(s.get('email') == email_l for s in data)
+        if not exists:
+            data.append({'email': email_l, 'name': name or '', 'created_at': __import__('datetime').datetime.utcnow().isoformat()})
+            subs_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+        return Response({'status': 'ok', 'created': not exists})
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+def notify_collection(request, col_id: int):
+    """Internal endpoint to trigger notification for collection by id.
+    Protect by header `X-Internal-Token` matching env `INTERNAL_TOKEN`.
+    """
+    token = request.META.get('HTTP_X_INTERNAL_TOKEN') or request.META.get('HTTP_X_INTERNAL_TOKEN'.lower())
+    if not token or token != os.getenv('INTERNAL_TOKEN', ''):
+        return Response({'status': 'forbidden'}, status=status.HTTP_403_FORBIDDEN)
+    try:
+        col = Coleccion.objects.get(id=col_id)
+    except Exception:
+        return Response({'status': 'not_found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def _notify():
+        try:
+            subs_file = Path(__file__).resolve().parent / 'subscribers.json'
+            if not subs_file.exists():
+                return
+            subs = json.loads(subs_file.read_text(encoding='utf-8') or '[]')
+            if not subs:
+                return
+            subject = f"Nueva colección en SmartFashion: {col.nombre}"
+            plain = f"Hemos publicado una nueva colección: {col.nombre}\n\n{(col.descripcion or '')}\n\nVisítanos para ver los productos: /collections/{col.slug}/"
+            html = f"<p>Hola,</p><p>Hemos publicado una nueva colección: <strong>{col.nombre}</strong></p>"
+            if col.descripcion:
+                html += f"<p>{col.descripcion}</p>"
+            html += f"<p><a href=\"{getattr(settings, 'FRONTEND_URL', '') or '/collections/'+col.slug}\">Ver colección</a></p>"
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@smarthfashion.local')
+            for s in subs:
+                try:
+                    to = s.get('email')
+                    name = s.get('name') or ''
+                    personalized_html = html.replace('<p>Hola,</p>', f'<p>Hola {name},</p>' if name else '<p>Hola,</p>')
+                    msg = EmailMultiAlternatives(subject, plain, from_email, [to])
+                    msg.attach_alternative(personalized_html, "text/html")
+                    msg.send(fail_silently=True)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    threading.Thread(target=_notify, daemon=True).start()
+    return Response({'status': 'ok'})
 
 
 def _build_catalog_context_for_ai(snap: dict) -> str:
