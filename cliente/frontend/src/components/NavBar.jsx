@@ -83,12 +83,14 @@ export default function NavBar(){
 
   return (
     <nav id="nav-bar" className={scrolled ? 'scrolled' : ''} style={{ background: navBg }}>
-      <div className="nav-left">
+        <div className="nav-left">
         <button className="icon-btn" onClick={toggleTheme} aria-label="Cambiar tema" title="Cambiar tema">
           {theme === 'light' ? '🌙' : '☀️'}
         </button>
         <div className="vertical-sep">|</div>
-        <Link to="/" className="icon-btn" aria-label="Home" style={{textDecoration:null}}>Inicio</Link>
+        {!isMobile && (
+          <Link to="/" className="icon-btn" aria-label="Home" style={{textDecoration:null}}>Inicio</Link>
+        )}
         <div className="vertical-sep">|</div>
         <div
           ref={searchRef}
@@ -150,6 +152,7 @@ export default function NavBar(){
         </button>
         {mobileOpen && (
           <div ref={mobileMenuRef} className="mobile-menu" style={{position:'absolute', right:12, top:'64px', minWidth:200, background:'var(--color-bg)', border:'1px solid var(--color-border)', borderRadius:8, padding:12, zIndex:120}}>
+            <Link to="/" className="dropdown-item" onClick={()=> setMobileOpen(false)}>Inicio</Link>
             <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); scrollOrNavigate('new-arrivals') }}>Novedades</button>
             <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); scrollOrNavigate('collections') }}>Colecciones</button>
             <Link to="/catalogo" className="dropdown-item" onClick={()=> setMobileOpen(false)}>Categorías</Link>
