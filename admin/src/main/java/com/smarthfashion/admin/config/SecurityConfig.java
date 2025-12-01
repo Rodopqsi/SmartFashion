@@ -62,7 +62,7 @@ public class SecurityConfig {
                 auth.anyRequest().authenticated();
             })
             .formLogin(login -> login
-                .loginPage("/admin/login")
+                .loginPage("/login")
                 .loginProcessingUrl("/login")
                 .defaultSuccessUrl("/admin/products", true)
                 .permitAll()

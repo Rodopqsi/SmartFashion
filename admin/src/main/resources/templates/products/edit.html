@@ -10,33 +10,94 @@
 
   <div class="grid two">
     <div>
-      <h3>Variantes</h3>
-      <form method="post" th:action="@{'/admin/products/' + ${product.id} + '/variants'}" class="stack">
+      <div style="border:1px solid #eee;border-radius:8px;padding:16px;margin-bottom:16px">
+      <h3 style="margin-top:0">Datos del producto</h3>
+      <form method="post" th:action="@{'/admin/products/' + ${product.id}}" class="stack">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-        <label>Talla
+        <div class="grid two" style="gap:12px">
+          <div class="field">
+            <label>Nombre</label>
+            <input type="text" name="nombre" th:value="${product.nombre}" required />
+          </div>
+          <div class="field">
+            <label>Precio</label>
+            <input type="number" step="0.01" name="precio" th:value="${product.precio}" required />
+          </div>
+          <div class="field">
+            <label>Categoría</label>
+            <select name="categoriaId" required>
+              <option th:each="c : ${categories}" th:value="${c.id}" th:selected="${product.categoria != null and c.id == product.categoria.id}" th:text="${c.nombre}"></option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Imagen (URL)</label>
+            <input type="url" name="imagePreview" th:value="${product.imagePreview}" />
+          </div>
+          <div class="field" style="grid-column:1 / -1">
+            <label>Descripción</label>
+            <textarea name="descripcion" rows="4" required th:text="${product.descripcion}"></textarea>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" type="submit">Guardar cambios</button>
+        </div>
+      </form>
+      </div>
+
+      <div style="border:1px solid #eee;border-radius:8px;padding:16px;margin-bottom:16px">
+      <h3 style="margin:0 0 10px 0">Variantes</h3>
+      <style>
+        .form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:end}
+        @media(max-width:900px){.form-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:520px){.form-grid{grid-template-columns:1fr}}
+      </style>
+      <form method="post" th:action="@{'/admin/products/' + ${product.id} + '/variants'}" class="form-grid">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <div class="field">
+          <label>Talla</label>
           <select name="sizeId" required>
             <option th:each="s : ${sizes}" th:value="${s.id}" th:text="${s.nombre}"></option>
           </select>
-        </label>
-        <label>Color
+        </div>
+        <div class="field">
+          <label>Color</label>
           <select name="colorId" required>
             <option th:each="c : ${colors}" th:value="${c.id}" th:text="${c.nombre}"></option>
           </select>
-        </label>
-        <label>Stock
+        </div>
+        <div class="field">
+          <label>Stock</label>
           <input type="number" name="stock" min="0" value="0" />
-        </label>
-        <button class="btn" type="submit">Agregar variante</button>
+        </div>
+        <div style="justify-self:end">
+          <button class="btn" type="submit">Agregar variante</button>
+        </div>
       </form>
 
       <table class="table" style="margin-top:10px">
-        <thead><tr><th>ID</th><th>Talla</th><th>Color</th><th>Stock</th><th></th></tr></thead>
+        <thead><tr><th>ID</th><th>Talla</th><th>Color</th><th>Stock</th><th></th><th></th></tr></thead>
         <tbody>
         <tr th:each="v : ${variants}">
           <td th:text="${v.id}"></td>
-          <td th:text="${v.size != null ? v.size.nombre : '-'}"></td>
-          <td th:text="${v.color != null ? v.color.nombre : '-'}"></td>
-          <td th:text="${v.stock}"></td>
+          <td>
+            <form method="post" th:action="@{'/admin/products/' + ${product.id} + '/variants/' + ${v.id}}" class="row" style="gap:8px; align-items:center">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+              <select name="sizeId">
+                <option th:each="s : ${sizes}" th:value="${s.id}" th:selected="${v.size != null and s.id == v.size.id}" th:text="${s.nombre}"></option>
+              </select>
+          </td>
+          <td>
+              <select name="colorId">
+                <option th:each="c : ${colors}" th:value="${c.id}" th:selected="${v.color != null and c.id == v.color.id}" th:text="${c.nombre}"></option>
+              </select>
+          </td>
+          <td>
+              <input type="number" name="stock" min="0" th:value="${v.stock}" style="width:90px" />
+          </td>
+          <td>
+              <button class="btn" type="submit">Guardar</button>
+            </form>
+          </td>
           <td>
             <form method="post" th:action="@{'/admin/products/' + ${product.id} + '/variants/' + ${v.id} + '/delete'}">
               <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
@@ -46,10 +107,12 @@
         </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <div>
-      <h3>Imágenes por variante</h3>
+      <div style="border:1px solid #eee;border-radius:8px;padding:16px;margin-bottom:16px">
+      <h3 style="margin-top:0">Imágenes por variante</h3>
       <form method="post" th:action="@{'/admin/products/' + ${product.id} + '/images'}" enctype="multipart/form-data" class="stack">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
         <div class="row">
@@ -107,6 +170,7 @@
           else { urlBox.style.display='block'; fileBox.style.display='none'; }
         }
       </script>
+      </div>
     </div>
   </div>
 </section>

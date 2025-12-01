@@ -1,6 +1,7 @@
 import React from 'react'
 import { useAuth } from '../auth.jsx'
 import AddressForm from '../components/AddressForm.jsx'
+import './Addresses.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 
@@ -36,13 +37,13 @@ export default function Addresses(){
   }
 
   return (
-    <div style={{padding:'2rem', maxWidth:900, margin:'0 auto'}}>
+    <div className="addresses-page">
       <h2>Mis direcciones</h2>
       {!tokens?.access && (
         <div style={card}>Debes iniciar sesión para ver y gestionar tus direcciones.</div>
       )}
       <div className="addresses-grid">
-        <aside style={card}>
+        <aside className="addresses-form" style={card}>
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
             <strong>{editing ? 'Editar dirección' : 'Agregar nueva dirección'}</strong>
             {tokens?.access && editing && <button style={miniBtn} onClick={()=>setEditing(null)}>Nueva</button>}
@@ -55,13 +56,13 @@ export default function Addresses(){
             )}
           </div>
         </aside>
-        <div>
+        <div className="addresses-list">
           {loading ? 'Cargando...' : (
             !tokens?.access ? null : addresses.length ? (
               <div style={{display:'grid', gap:10}}>
                 {addresses.map(a => (
                   <div key={a.id} style={card}>
-                    <div style={{display:'grid', gridTemplateColumns:'1fr auto', gap:8}}>
+                    <div style={{display:'grid', gridTemplateColumns:'1fr auto', gap:8, alignItems:'start'}}>
                       <div>
                         <div style={{fontWeight:700}}>{a.label || a.nombre}</div>
                         <div style={{fontSize:12, color:'#6b7280'}}>
@@ -74,7 +75,7 @@ export default function Addresses(){
                         {a.referencia && <div style={{fontSize:12, color:'#6b7280'}}>Ref: {a.referencia}</div>}
                         {a.is_default && <span style={badge}>Predeterminada</span>}
                       </div>
-                      <div style={{display:'flex', flexDirection:'column', gap:6}}>
+                      <div style={{display:'flex', flexDirection:'column', gap:6, alignSelf:'start'}}>
                         {!a.is_default && <button onClick={()=>markDefault(a.id)} style={miniBtn}>Hacer predet.</button>}
                         <button onClick={()=>setEditing(a)} style={miniBtn}>Editar</button>
                         <button onClick={()=>del(a.id)} style={miniDanger}>Eliminar</button>

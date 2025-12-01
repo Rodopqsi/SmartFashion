@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from shop import auth_views
+from . import chatbot_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -27,5 +28,6 @@ urlpatterns = [
     path('api/auth/sessions/logout_all/', auth_views.sessions_logout_all, name='sessions_logout_all'),
     path('api/auth/token/', auth_views.CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', auth_views.CustomTokenRefreshView.as_view(), name='token_refresh'),
+        path('api/chatbot/query', chatbot_views.query, name='chatbot_query'),
     path('sso/admin/', auth_views.admin_sso_redirect, name='admin_sso'),
 ]

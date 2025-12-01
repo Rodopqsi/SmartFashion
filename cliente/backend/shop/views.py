@@ -15,6 +15,89 @@ from pathlib import Path
 from django.db import transaction
 
 
+def _load_active_promotion(promo_code):
+    if not promo_code:
+        return None
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, tipo_descuento, valor
+                FROM promocion
+                WHERE codigo = %s AND activo = 1 AND NOW() BETWEEN fecha_inicio AND fecha_fin
+                LIMIT 1
+                """,
+                [promo_code]
+            )
+            row = cursor.fetchone()
+        if not row:
+            return None
+        promo_id, tipo, valor = int(row[0]), str(row[1]), float(row[2])
+        prod_ids, cat_ids = set(), set()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id_producto, id_categoria
+                    FROM aplicacion_promocion
+                    WHERE id_promocion = %s
+                    """,
+                    [promo_id]
+                )
+                rows = cursor.fetchall() or []
+                for p, c in rows:
+                    if p is not None:
+                        try:
+                            prod_ids.add(int(p))
+                        except Exception:
+                            pass
+                    if c is not None:
+                        try:
+                            cat_ids.add(int(c))
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+        return {
+            'id': promo_id,
+            'tipo': tipo,
+            'valor': valor,
+            'products': prod_ids,
+            'categories': cat_ids,
+        }
+    except Exception:
+        return None
+
+
+def _apply_promo_to_price(base_price, product_id, category_id, promo):
+    if not promo:
+        return base_price
+    scope_products = promo.get('products') or set()
+    scope_categories = promo.get('categories') or set()
+    is_scoped = bool(scope_products or scope_categories)
+    eligible = True
+    if is_scoped:
+        try:
+            cid = int(category_id) if category_id is not None else None
+        except Exception:
+            cid = None
+        eligible = (product_id in scope_products) or (cid is not None and cid in scope_categories)
+    if not eligible:
+        return base_price
+    tipo = (promo.get('tipo') or '').upper()
+    try:
+        valor = float(promo.get('valor') or 0)
+    except Exception:
+        valor = 0.0
+    if tipo == 'PORCENTAJE':
+        final_price = base_price * max(0.0, (1.0 - valor))
+    elif tipo == 'MONTO_FIJO':
+        final_price = max(0.0, base_price - valor)
+    else:
+        final_price = base_price
+    return round(final_price + 1e-9, 2)
+
+
 def _get_user_email(request):
     u = getattr(request, 'user', None)
     if getattr(u, 'is_authenticated', False):
@@ -651,11 +734,14 @@ def product_reviews(request, pk: int):
 def checkout_preview(request):
     """Compute totals for given cart payload; validate stock availability."""
     items = request.data.get('items') or []
+    promo_code = request.data.get('promo_code') or request.data.get('promotion_code') or None
+    promo = _load_active_promotion(promo_code)
     if not isinstance(items, list) or not items:
         return Response({'status': 'invalid', 'message': 'items requerido'}, status=status.HTTP_400_BAD_REQUEST)
 
     line_items = []
     subtotal = 0.0
+    discount_total = 0.0
     for it in items:
         try:
             pid = int(it.get('product_id'))
@@ -666,11 +752,11 @@ def checkout_preview(request):
             return Response({'status': 'invalid', 'message': 'item inválido'}, status=status.HTTP_400_BAD_REQUEST)
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT nombre, precio, image_preview FROM producto WHERE id=%s", [pid])
+            cursor.execute("SELECT nombre, precio, image_preview, id_categoria FROM producto WHERE id=%s", [pid])
             prow = cursor.fetchone()
         if not prow:
             return Response({'status': 'invalid', 'message': f'producto {pid} no existe'}, status=status.HTTP_400_BAD_REQUEST)
-        name, price, image = prow[0], float(prow[1] or 0), prow[2]
+        name, price, image, cat_id = prow[0], float(prow[1] or 0), prow[2], prow[3]
 
         stock_ok = True
         if size_id is not None or color_id is not None:
@@ -687,13 +773,17 @@ def checkout_preview(request):
             stock = int(row[0] if row else 0)
             stock_ok = stock >= qty
 
-        amount = price * qty
+        final_unit = _apply_promo_to_price(price, pid, cat_id, promo)
+        amount = final_unit * qty
         subtotal += amount
+        discount_total += max(0.0, (price - final_unit)) * qty
         line_items.append({
             'product_id': pid,
             'name': name,
             'image': image,
             'price': price,
+            'precio_descuento': (final_unit if final_unit != price else None),
+            'final_price': final_unit,
             'qty': qty,
             'size_id': size_id,
             'color_id': color_id,
@@ -703,7 +793,7 @@ def checkout_preview(request):
 
     igv = subtotal * 0.18
     total = subtotal + igv
-    return Response({'status': 'ok', 'data': {'items': line_items, 'subtotal': subtotal, 'igv': igv, 'total': total}})
+    return Response({'status': 'ok', 'data': {'items': line_items, 'subtotal': subtotal, 'igv': igv, 'total': total, 'discount_total': discount_total, 'promo_applied': bool(promo)}})
 
 
 @api_view(['POST'])
@@ -714,10 +804,13 @@ def checkout_confirm(request):
         return Response({'status': 'invalid', 'message': 'items requerido'}, status=status.HTTP_400_BAD_REQUEST)
 
     user_email = _get_user_email(request)
+    promo_code = request.data.get('promo_code') or request.data.get('promotion_code') or None
+    promo = _load_active_promotion(promo_code)
 
     try:
         with transaction.atomic():
             subtotal = 0.0
+            discount_total = 0.0
             price_cache = {}
             for it in items:
                 pid = int(it.get('product_id'))
@@ -752,15 +845,21 @@ def checkout_confirm(request):
 
                 if pid not in price_cache:
                     with connection.cursor() as cursor:
-                        cursor.execute("SELECT precio, nombre, image_preview FROM producto WHERE id=%s", [pid])
+                        cursor.execute("SELECT precio, nombre, image_preview, id_categoria FROM producto WHERE id=%s", [pid])
                         prow = cursor.fetchone()
+                    base_price = float(prow[0] or 0) if prow else 0.0
+                    final_unit = _apply_promo_to_price(base_price, pid, (prow[3] if prow else None), promo)
                     price_cache[pid] = {
-                        'price': float(prow[0] or 0) if prow else 0.0,
+                        'price': base_price,
+                        'final_price': final_unit,
                         'name': prow[1] if prow else f'Producto {pid}',
                         'image': prow[2] if prow else None,
                     }
-                line_amount = price_cache[pid]['price'] * qty
+                final_unit = price_cache[pid]['final_price']
+                base_price = price_cache[pid]['price']
+                line_amount = final_unit * qty
                 subtotal += line_amount
+                discount_total += max(0.0, (base_price - final_unit)) * qty
 
             igv = subtotal * 0.18
             total = subtotal + igv
@@ -785,13 +884,13 @@ def checkout_confirm(request):
                         qty = max(1, int(it.get('qty', 1)))
                         size_id = it.get('size_id')
                         color_id = it.get('color_id')
-                        meta = price_cache.get(pid) or {'price':0.0,'name':f'Producto {pid}','image':None}
+                        meta = price_cache.get(pid) or {'final_price':0.0,'name':f'Producto {pid}','image':None}
                         cursor.execute(
                             """
                             INSERT INTO order_items (order_id, product_id, size_id, color_id, qty, unit_price, amount, name, image)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """,
-                            [order_id, pid, size_id, color_id, qty, meta['price'], meta['price']*qty, meta['name'], meta['image']]
+                            [order_id, pid, size_id, color_id, qty, meta['final_price'], meta['final_price']*qty, meta['name'], meta['image']]
                         )
             except Exception:
                 # If insertion failed, attempt a safe fallback insert and log the error.
@@ -823,13 +922,13 @@ def checkout_confirm(request):
                                     qty = max(1, int(it.get('qty', 1)))
                                     size_id = it.get('size_id')
                                     color_id = it.get('color_id')
-                                    meta = price_cache.get(pid) or {'price':0.0,'name':f'Producto {pid}','image':None}
+                                    meta = price_cache.get(pid) or {'final_price':0.0,'name':f'Producto {pid}','image':None}
                                     cursor.execute(
                                         """
                                         INSERT INTO order_items (order_id, product_id, size_id, color_id, qty, unit_price, amount, name, image)
                                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                                         """,
-                                        [order_id, pid, size_id, color_id, qty, meta['price'], meta['price']*qty, meta['name'], meta['image']]
+                                        [order_id, pid, size_id, color_id, qty, meta['final_price'], meta['final_price']*qty, meta['name'], meta['image']]
                                     )
                                 except Exception:
                                     # log per-item insert failure but continue
@@ -964,6 +1063,7 @@ def payments_create_session(request):
 
     email = _get_user_email(request)
     address_id = request.data.get('address_id')
+    promo_code = request.data.get('promo_code') or request.data.get('promotion_code') or None
 
     from rest_framework.test import APIRequestFactory
     factory = APIRequestFactory()
@@ -971,6 +1071,7 @@ def payments_create_session(request):
         'items': items,
         'address_id': address_id,
         'userEmail': email,
+        'promo_code': promo_code,
     }, format='json')
     try:
         preview_req.user = getattr(request, 'user', None)
@@ -986,7 +1087,8 @@ def payments_create_session(request):
     currency = os.getenv('STRIPE_CURRENCY', 'pen')
     for it in line_items_preview:
         name = it.get('name') or f"Producto {it.get('product_id')}"
-        amount_cents = int(round(float(it.get('price', 0.0)) * 100))
+        unit_price = float(it.get('final_price') if it.get('final_price') is not None else it.get('price', 0.0))
+        amount_cents = int(round(unit_price * 100))
         qty = int(it.get('qty', 1))
         line_items.append({
             'price_data': {
@@ -1007,11 +1109,23 @@ def payments_create_session(request):
         return Response({'status': 'error', 'message': 'STRIPE_SECRET_KEY no configurado'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     try:
+        discounts_param = None
+        if promo_code:
+            try:
+                pc_list = stripe.PromotionCode.list(code=promo_code, active=True, limit=1)
+                pc_data = pc_list.data[0] if getattr(pc_list, 'data', []) else None
+                if pc_data and pc_data.get('id'):
+                    discounts_param = [{'promotion_code': pc_data['id']}]
+            except Exception:
+                discounts_param = None
+
+        allow_codes = not (promo_code and bool(preview_data.get('promo_applied')))
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             mode='payment',
             line_items=line_items,
-            allow_promotion_codes=True,
+            allow_promotion_codes=allow_codes,
+            discounts=discounts_param,
             success_url=f"{success_base}/checkout/success?order={pre_order}&session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{cancel_base}/checkout/cancel",
             metadata={
@@ -1019,6 +1133,7 @@ def payments_create_session(request):
                 'email': email or '',
                 'address_id': str(address_id or ''),
                 'items': json.dumps(items, ensure_ascii=False),
+                'promo_code': promo_code or '',
             }
         )
     except Exception as e:
@@ -1103,6 +1218,7 @@ def payments_webhook(request):
                 'address_id': address_id,
                 'userEmail': email,
                 'order_number': order_number,
+                'promo_code': metadata.get('promo_code') or None,
             }, format='json')
             try:
                 # ensure request has a user attribute (may be None)
@@ -1495,6 +1611,8 @@ def user_orders(request):
         )
         rows = cursor.fetchall()
 
+    admin_url = os.getenv('ADMIN_URL', 'http://localhost:8081')
+    import requests as _requests
     for r in rows:
         order_id = r[0]
         order_number = r[1]
@@ -1546,6 +1664,26 @@ def user_orders(request):
         except Exception:
             envio = None
 
+        # Enrich shipment info from Admin live endpoint when available
+        try:
+            if admin_url:
+                tr = _requests.get(f"{admin_url}/tracking/api/{order_number}", timeout=3)
+                if tr.ok:
+                    tj = tr.json()
+                    live_status = tj.get('status')
+                    empresa = tj.get('empresa')
+                    codigo = tj.get('codigoTracking')
+                    if envio is None:
+                        envio = {}
+                    if live_status:
+                        envio['status'] = live_status
+                    if empresa:
+                        envio['empresa'] = empresa
+                    if codigo:
+                        envio['codigo_tracking'] = codigo
+        except Exception:
+            pass
+
         orders.append({
             'order_id': order_id,
             'order_number': order_number,
@@ -1555,6 +1693,7 @@ def user_orders(request):
             'total': total,
             'items': items,
             'envio': envio,
+            'tracking_url': f"{admin_url}/tracking/{order_number}",
         })
 
     return Response({'status': 'ok', 'data': orders})

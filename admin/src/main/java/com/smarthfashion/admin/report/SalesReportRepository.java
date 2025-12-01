@@ -19,8 +19,8 @@ public interface SalesReportRepository extends Repository<com.smarthfashion.admi
     List<Object[]> monthlyTotals(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     // Summary for a date range
-    @Query(value = "SELECT COALESCE(SUM(total),0) as total, COUNT(id) as orders FROM orders WHERE created_at BETWEEN :from AND :to", nativeQuery = true)
-    Object[] rangeSummary(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    @Query(value = "SELECT COALESCE(SUM(total),0) as total, COUNT(*) as orders FROM orders WHERE created_at BETWEEN :from AND :to", nativeQuery = true)
+    List<Object[]> rangeSummary(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     // Top products within a date range (by quantity, limit 10)
     @Query(value = "SELECT oi.product_id, MAX(oi.name) as name, COALESCE(SUM(oi.qty),0) as qty, COALESCE(SUM(oi.amount),0) as revenue " +
@@ -28,4 +28,11 @@ public interface SalesReportRepository extends Repository<com.smarthfashion.admi
             "WHERE o.created_at BETWEEN :from AND :to " +
             "GROUP BY oi.product_id ORDER BY qty DESC LIMIT 10", nativeQuery = true)
     List<Object[]> topProducts(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    // Basic diagnostics: row counts
+    @Query(value = "SELECT COUNT(*) FROM orders", nativeQuery = true)
+    Long countOrders();
+
+    @Query(value = "SELECT COUNT(*) FROM order_items", nativeQuery = true)
+    Long countOrderItems();
 }

@@ -9,6 +9,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import java.math.BigDecimal;
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin/products")
@@ -39,8 +41,31 @@ public class ProductController {
     }
 
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("products", productRepository.findAll());
+    public String list(Model model,
+                       @RequestParam(value = "q", required = false) String q,
+                       @RequestParam(value = "categoriaId", required = false) String categoriaIdStr,
+                       @RequestParam(value = "precioMin", required = false) String precioMinStr,
+                       @RequestParam(value = "precioMax", required = false) String precioMaxStr) {
+        String qn = (q != null && !q.trim().isEmpty()) ? q.trim() : null;
+        java.math.BigDecimal precioMin = null;
+        java.math.BigDecimal precioMax = null;
+        try { if (precioMinStr != null && !precioMinStr.isBlank()) precioMin = new java.math.BigDecimal(precioMinStr.trim()); } catch (Exception ignored) {}
+        try { if (precioMaxStr != null && !precioMaxStr.isBlank()) precioMax = new java.math.BigDecimal(precioMaxStr.trim()); } catch (Exception ignored) {}
+        Long categoriaId = null;
+        try { if (categoriaIdStr != null && !categoriaIdStr.isBlank()) categoriaId = Long.parseLong(categoriaIdStr.trim()); } catch (Exception ignored) {}
+
+        java.util.List<Product> results;
+        if (qn != null || categoriaId != null || precioMin != null || precioMax != null) {
+            results = productRepository.search(qn, categoriaId, precioMin, precioMax);
+        } else {
+            results = productRepository.findAll();
+        }
+        model.addAttribute("products", results);
+        model.addAttribute("categories", categoryRepository.findAll());
+        model.addAttribute("q", q);
+        model.addAttribute("categoriaId", categoriaId);
+        model.addAttribute("precioMin", precioMinStr);
+        model.addAttribute("precioMax", precioMaxStr);
         return "products/list";
     }
 
@@ -114,6 +139,7 @@ public class ProductController {
         model.addAttribute("images", imageRepository.findByProduct_Id(id));
         model.addAttribute("colors", colorRepository.findAll());
         model.addAttribute("sizes", sizeRepository.findAll());
+        model.addAttribute("categories", categoryRepository.findAll());
         return "products/edit";
     }
 
@@ -202,6 +228,71 @@ public class ProductController {
     @PostMapping("/{id}/images/{imageId}/delete")
     public String deleteImage(@PathVariable("id") Long id, @PathVariable("imageId") Long imageId){
         imageRepository.deleteById(imageId);
+        return "redirect:/admin/products/"+id+"/edit";
+    }
+
+    
+    @PostMapping("/{id}")
+    public String updateProduct(@PathVariable("id") Long id,
+                                @RequestParam("nombre") String nombre,
+                                @RequestParam("descripcion") String descripcion,
+                                @RequestParam("precio") BigDecimal precio,
+                                @RequestParam("categoriaId") Long categoriaId,
+                                @RequestParam(value = "imagePreview", required = false) String imagePreview,
+                                Model model) {
+        Product p = productRepository.findById(id).orElse(null);
+        if (p == null) {
+            return "redirect:/admin/products?err=Producto%20no%20encontrado";
+        }
+        if (nombre == null || nombre.isBlank() || descripcion == null || descripcion.isBlank() || precio == null || categoriaId == null) {
+            return "redirect:/admin/products/"+id+"/edit?err=Completa%20todos%20los%20campos";
+        }
+        p.setNombre(nombre.trim());
+        p.setDescripcion(descripcion.trim());
+        p.setPrecio(precio);
+        p.setCategoria(categoryRepository.findById(categoriaId).orElse(null));
+        if (imagePreview != null) p.setImagePreview(imagePreview.trim());
+        productRepository.save(p);
+        return "redirect:/admin/products/"+id+"/edit";
+    }
+
+    
+    @PostMapping("/{id}/delete")
+    public String deleteProduct(@PathVariable("id") Long id) {
+        // Delete children first to avoid FK constraint issues
+        List<ProductImage> imgs = imageRepository.findByProduct_Id(id);
+        if (imgs != null && !imgs.isEmpty()) {
+            imageRepository.deleteAll(imgs);
+        }
+        List<ProductVariant> vars = variantRepository.findByProduct_Id(id);
+        if (vars != null && !vars.isEmpty()) {
+            variantRepository.deleteAll(vars);
+        }
+        productRepository.deleteById(id);
+        return "redirect:/admin/products?ok=Producto%20eliminado";
+    }
+
+    
+    @PostMapping("/{id}/variants/{variantId}")
+    public String updateVariant(@PathVariable("id") Long id,
+                                @PathVariable("variantId") Long variantId,
+                                @RequestParam(value = "sizeId", required = false) Long sizeId,
+                                @RequestParam(value = "colorId", required = false) Long colorId,
+                                @RequestParam(value = "stock", required = false) Integer stock) {
+        ProductVariant v = variantRepository.findById(variantId).orElse(null);
+        if (v == null) {
+            return "redirect:/admin/products/"+id+"/edit?err=Variante%20no%20encontrada";
+        }
+        if (sizeId != null) {
+            v.setSize(sizeRepository.findById(sizeId).orElse(null));
+        }
+        if (colorId != null) {
+            v.setColor(colorRepository.findById(colorId).orElse(null));
+        }
+        if (stock != null && stock >= 0) {
+            v.setStock(stock);
+        }
+        variantRepository.save(v);
         return "redirect:/admin/products/"+id+"/edit";
     }
 }

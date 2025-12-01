@@ -1,52 +1,118 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="es">
-<head>
-    <meta charset="UTF-8" />
-    <title th:text="${title}">Reporte de Ventas</title>
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout (title=${title}, content=~{::section})}">
+<section>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
-        .cards { display: flex; gap: 1rem; flex-wrap: wrap; }
-        .card { padding: .8rem 1rem; background:#f8f9fa; border:1px solid #ddd; border-radius:6px; flex:1 1 180px; }
-        h2 { margin-top:1.5rem; }
-        canvas { max-width: 100%; }
-        table { width:100%; border-collapse: collapse; }
-        th, td { padding: .4rem .6rem; border-bottom:1px solid #eee; text-align:left; }
+        .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:12px}
+        @media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:600px){.cards{grid-template-columns:1fr}}
+        .kpi{padding:12px;border:1px solid var(--admin-border);border-radius:10px;background:var(--admin-bg-soft)}
+        .kpi strong{display:block;font-size:12px;color:var(--admin-text-soft)}
+        .kpi .value{font-size:20px;font-weight:700}
+        .grid-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        @media(max-width:900px){.grid-two{grid-template-columns:1fr}}
     </style>
-</head>
-<body>
-<div th:replace="layout :: navbar"></div>
-<main class="container" style="padding:1rem 1.5rem;">
     <h1 th:text="${title}">Reporte de Ventas</h1>
+    <form id="rangeForm" class="cards" style="grid-template-columns:1fr 1fr 1fr;align-items:end">
+        <div class="kpi">
+            <strong>Desde</strong>
+            <input type="date" id="fromDate" style="width:100%" />
+        </div>
+        <div class="kpi">
+            <strong>Hasta</strong>
+            <input type="date" id="toDate" style="width:100%" />
+        </div>
+        <div class="kpi" style="display:flex;gap:8px;align-items:center;justify-content:flex-end">
+            <button type="button" id="applyRange" class="btn">Aplicar</button>
+            <a id="exportCsv" class="btn" href="#">Exportar CSV</a>
+        </div>
+    </form>
     <div class="cards">
-        <div class="card" id="card-today">
-            <strong>Hoy</strong>
-            <div>Total: <span th:text="${summaryToday.totalSales}"></span></div>
-            <div>Pedidos: <span th:text="${summaryToday.ordersCount}"></span></div>
+        <div class="kpi"><strong>Hoy</strong><div class="value" th:text="${summaryToday.totalSales}">0</div><div>Pedidos: <span th:text="${summaryToday.ordersCount}">0</span></div></div>
+        <div class="kpi"><strong>Mes</strong><div class="value" th:text="${summaryMonth.totalSales}">0</div><div>Pedidos: <span th:text="${summaryMonth.ordersCount}">0</span></div></div>
+        <div class="kpi"><strong>Año</strong><div class="value" th:text="${summaryYear.totalSales}">0</div><div>Pedidos: <span th:text="${summaryYear.ordersCount}">0</span></div></div>
+    </div>
+    <div class="grid-two">
+        <div>
+            <h3 style="margin:6px 0">Últimos 30 días</h3>
+            <canvas id="chartDaily" height="120"></canvas>
         </div>
-        <div class="card" id="card-month">
-            <strong>Mes</strong>
-            <div>Total: <span th:text="${summaryMonth.totalSales}"></span></div>
-            <div>Pedidos: <span th:text="${summaryMonth.ordersCount}"></span></div>
-        </div>
-        <div class="card" id="card-year">
-            <strong>Año</strong>
-            <div>Total: <span th:text="${summaryYear.totalSales}"></span></div>
-            <div>Pedidos: <span th:text="${summaryYear.ordersCount}"></span></div>
+        <div>
+            <h3 style="margin:6px 0">Últimos 12 meses</h3>
+            <canvas id="chartMonthly" height="120"></canvas>
         </div>
     </div>
+    <div style="margin-top:16px">
+        <h3 style="margin:6px 0">Top Productos (30 días)</h3>
+        <table class="table" id="topProducts">
+            <thead><tr><th>Producto</th><th>Cantidad</th><th>Ingresos</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
 
-    <h2>Últimos 30 días</h2>
-    <canvas id="chartDaily" height="120"></canvas>
-    <h2>Últimos 12 meses</h2>
-    <canvas id="chartMonthly" height="120"></canvas>
-    <h2>Top Productos (30 días)</h2>
-    <table id="topProducts">
-        <thead>
-        <tr><th>Producto</th><th>Cantidad</th><th>Ingresos</th></tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-</main>
-<script src="/js/sales-dashboard.js"></script>
-</body>
+    <script>
+        (function(){
+            const fmt = d => d.toISOString().split('T')[0];
+            const today = new Date();
+            const start30 = new Date(); start30.setDate(today.getDate()-29);
+            document.getElementById('fromDate').value = fmt(start30);
+            document.getElementById('toDate').value = fmt(today);
+            document.getElementById('applyRange').addEventListener('click', loadData);
+            document.getElementById('exportCsv').addEventListener('click', (e)=>{
+                e.preventDefault();
+                const from = document.getElementById('fromDate').value;
+                const to = document.getElementById('toDate').value;
+                window.location.href = `/admin/reports/api/sales/export.csv?from=${from}&to=${to}`;
+            });
+            loadData();
+        })();
+
+        async function loadData(){
+            try{
+                const from = document.getElementById('fromDate').value;
+                const to = document.getElementById('toDate').value;
+                const qs = `?from=${from}&to=${to}`;
+                const [dailyResp, monthlyResp, topResp] = await Promise.all([
+                    fetch('/admin/reports/api/sales/daily'+qs),
+                    fetch('/admin/reports/api/sales/monthly'+qs),
+                    fetch('/admin/reports/api/sales/top-products'+qs)
+                ]);
+                const daily = await dailyResp.json();
+                const monthly = await monthlyResp.json();
+                const top = await topResp.json();
+
+                const ctxD = document.getElementById('chartDaily');
+                if(ctxD && window.Chart){
+                    new Chart(ctxD, {
+                        type: 'line',
+                        data: { labels: daily.map(p=>p.period), datasets: [
+                            { label: 'Ventas', data: daily.map(p=>p.total), borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.15)', tension:.2, fill:true },
+                            { label: 'Pedidos', data: daily.map(p=>p.orders), borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.15)', tension:.2, yAxisID:'y1' }
+                        ]},
+                        options:{ responsive:true, interaction:{mode:'index', intersect:false}, scales:{ y:{ beginAtZero:true }, y1:{ beginAtZero:true, position:'right', grid:{ drawOnChartArea:false } } } }
+                    });
+                }
+                const ctxM = document.getElementById('chartMonthly');
+                if(ctxM && window.Chart){
+                    new Chart(ctxM, {
+                        type: 'bar',
+                        data: { labels: monthly.map(p=>p.period), datasets: [
+                            { label: 'Ventas', data: monthly.map(p=>p.total), backgroundColor:'#6366f1' }
+                        ]},
+                        options:{ responsive:true, scales:{ y:{ beginAtZero:true } } }
+                    });
+                }
+                const tbody = document.querySelector('#topProducts tbody');
+                if(tbody){
+                    tbody.innerHTML = '';
+                    top.forEach(row=>{
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${row.name||('ID '+row.productId)}</td><td>${row.quantity}</td><td>${row.revenue}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }catch(e){ console.error(e); }
+        }
+    </script>
+</section>
 </html>

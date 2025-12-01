@@ -5,9 +5,12 @@ import com.smarthfashion.admin.report.dto.SalesSummaryDTO;
 import com.smarthfashion.admin.report.dto.TimeSeriesPointDTO;
 import com.smarthfashion.admin.report.dto.TopProductDTO;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,6 +31,7 @@ public class SalesReportController {
     public String salesReportPage(Model model) {
         model.addAttribute("title", "Reporte de Ventas");
         // Prefetch summaries for fast initial render
+        service.logBasicDiagnostics();
         model.addAttribute("summaryToday", service.todaySummary());
         model.addAttribute("summaryMonth", service.monthSummary());
         model.addAttribute("summaryYear", service.yearSummary());
@@ -44,18 +48,36 @@ public class SalesReportController {
         return ResponseEntity.ok(payload);
     }
 
-    @GetMapping("/api/sales/daily30")
-    public ResponseEntity<List<TimeSeriesPointDTO>> daily30() {
-        return ResponseEntity.ok(service.last30Days());
+    @GetMapping("/api/sales/daily")
+    public ResponseEntity<List<TimeSeriesPointDTO>> daily(
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        return ResponseEntity.ok(service.dailyBetween(from, to));
     }
 
-    @GetMapping("/api/sales/monthly12")
-    public ResponseEntity<List<TimeSeriesPointDTO>> monthly12() {
-        return ResponseEntity.ok(service.last12Months());
+    @GetMapping("/api/sales/monthly")
+    public ResponseEntity<List<TimeSeriesPointDTO>> monthly(
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        return ResponseEntity.ok(service.monthlyBetween(from, to));
     }
 
     @GetMapping("/api/sales/top-products")
-    public ResponseEntity<List<TopProductDTO>> topProducts() {
-        return ResponseEntity.ok(service.topProductsLast30Days());
+    public ResponseEntity<List<TopProductDTO>> topProducts(
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        return ResponseEntity.ok(service.topProductsBetween(from, to));
+    }
+
+    @GetMapping(value = "/api/sales/export.csv")
+    public ResponseEntity<byte[]> exportCsv(
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        String csv = service.exportCsv(from, to);
+        byte[] bytes = csv.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.TEXT_PLAIN);
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ventas.csv");
+        return ResponseEntity.ok().headers(headers).body(bytes);
     }
 }

@@ -157,7 +157,32 @@ export default function Home(){
         ))}
       </section>
 
-      {}
+      {/** Ubicación fija */}
+      <section id="location" className="section">
+        <h2>Dónde estamos</h2>
+        <div className="reveal" style={{ borderRadius:12, overflow:'hidden', border:'1px solid #eee' }}>
+          <iframe
+            title="Ubicación SmartFashion"
+            src={`https://maps.google.com/maps?q=${-8.113201},${-79.024034}&z=15&hl=es&output=embed`}
+            width="100%"
+            height="380"
+            style={{ border:0, display:'block' }}
+            loading="lazy"
+            allowFullScreen
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        </div>
+        <div style={{ marginTop:8 }}>
+          <a
+            href={`https://maps.google.com/?q=${-8.113201},${-79.024034}&z=16`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ color:'#0a7', fontWeight:600 }}
+          >
+            Ver en Google Maps
+          </a>
+        </div>
+      </section>
     </div>
   )
 }

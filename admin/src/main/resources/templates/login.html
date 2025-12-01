@@ -16,8 +16,7 @@
     .error{color:#b91c1c;margin-bottom:8px}
   </style>
   
-  <meta th:if="${param.error}" http-equiv="refresh" content="0;url='@{/login}'" />
-  <meta th:if="${param.logout}" http-equiv="refresh" content="0;url='@{/login}'" />
+  <!-- Evitar redirecciones automáticas que pueden interferir con el flujo de login -->
   
 </head>
 <body>

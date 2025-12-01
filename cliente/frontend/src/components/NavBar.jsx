@@ -163,7 +163,7 @@ export default function NavBar(){
                 <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); navigate('/direcciones') }}>Mis Direcciones</button>
                 <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); navigate('/reclamos') }}>Mis Reclamos</button>
                 <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); navigate('/devoluciones') }}>Mis Devoluciones</button>
-                <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); navigate('/perfil?tab=envios') }}>Mis Envíos</button>
+                <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); navigate('/envios') }}>Mis Envíos</button>
                 <button className="dropdown-item" onClick={()=>{ setMobileOpen(false); navigate('/favoritos') }}>Mis Favoritos</button>
                 <hr className="dropdown-sep" />
                 <button className="dropdown-item logout" onClick={()=>{ setMobileOpen(false); logout() }}>Cerrar Sesión</button>
@@ -198,7 +198,7 @@ export default function NavBar(){
                 <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/direcciones') }}>Mis Direcciones</button>
                 <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/reclamos') }}>Mis Reclamos</button>
                 <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/devoluciones') }}>Mis Devoluciones</button>
-                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/perfil?tab=envios') }}>Mis Envíos</button>
+                <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/envios') }}>Mis Envíos</button>
                 <button className="dropdown-item" onClick={()=>{ setOpenMenu(false); navigate('/favoritos') }}>Mis Favoritos</button>
                 <hr className="dropdown-sep"/>
                 <button className="dropdown-item logout" onClick={()=>{ setOpenMenu(false); logout() }}>Cerrar Sesión</button>

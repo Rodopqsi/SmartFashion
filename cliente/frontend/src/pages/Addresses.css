@@ -1,0 +1,36 @@
+:root{}
+
+.addresses-page{
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  /* separa del header */
+  margin-top: 4rem;
+}
+
+/* Dos columnas con formulario más ancho */
+.addresses-grid{
+  display: grid;
+  grid-template-columns: minmax(560px, 2fr) 1fr;
+  gap: 24px;
+  align-items: start; /* ambas columnas ancladas arriba */
+}
+
+/* por si necesitamos apuntalar estilos en cada lado */
+.addresses-form{
+  /* el card ya define borde y padding; aquí solo anclas */
+}
+.addresses-list{
+  align-self: start;
+}
+
+/* Responsivo: en pantallas pequeñas, una sola columna */
+@media (max-width: 900px){
+  .addresses-grid{
+    grid-template-columns: 1fr;
+  }
+  .addresses-page{
+    padding: 1rem;
+    margin-top: 2rem;
+  }
+}

@@ -105,4 +105,21 @@ public class CollectionController {
         }
         c.setProductos(set);
     }
+
+    @GetMapping("/search-products")
+    @ResponseBody
+    public List<Map<String, Object>> searchProducts(@RequestParam(name = "q", required = false) String q) {
+        String query = (q != null && !q.isBlank()) ? q.trim() : null;
+        List<Product> results = (query == null) ? productRepo.findAll() : productRepo.search(query, null, null, null);
+        return results.stream()
+                .limit(30)
+                .map(p -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", p.getId());
+                    m.put("nombre", p.getNombre());
+                    m.put("precio", p.getPrecio());
+                    return m;
+                })
+                .toList();
+    }
 }

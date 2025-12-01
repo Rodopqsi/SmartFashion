@@ -15,6 +15,7 @@
       </div>
       <nav class="menu">
         <a th:href="@{/admin}">Dashboard</a>
+        <a th:href="@{/admin/reports/sales}">Reportes</a>
         <div class="menu-group">
           <button class="menu-group-toggle" type="button" aria-expanded="false">
             Productos
@@ -69,6 +70,8 @@
       </header>
       <main class="container">
         <section th:replace="${content}">Contenido</section>
+
+        
       </main>
     </div>
   </div>
@@ -107,6 +110,14 @@
         var toggles = sidebar ? sidebar.querySelectorAll('.menu-group-toggle') : [];
         toggles && toggles.forEach && toggles.forEach(function(b){ b.setAttribute('aria-expanded','false'); });
       }
+      function expandGroup(btn){
+        if(!btn) return;
+        var submenu = btn.nextElementSibling;
+        btn.setAttribute('aria-expanded','true');
+        if(submenu){ submenu.hidden = false; }
+        var caret = btn.querySelector('.caret');
+        if(caret){ caret.style.transform = 'rotate(90deg)'; }
+      }
 
       if(toggle) toggle.addEventListener('click', function(){
         if(document.body.classList.contains('sidebar-open')) { collapseSubmenus(); close(); } else { open(); }
@@ -121,13 +132,41 @@
             ev.preventDefault();
             ev.stopPropagation();
             var expanded = btn.getAttribute('aria-expanded') === 'true';
-            btn.setAttribute('aria-expanded', String(!expanded));
-            var submenu = btn.nextElementSibling;
-            if(submenu){ submenu.hidden = expanded; }
-            var caret = btn.querySelector('.caret');
-            if(caret){ caret.style.transform = expanded ? 'rotate(0deg)' : 'rotate(90deg)'; }
+            if(expanded){
+              // collapse this one
+              var submenu = btn.nextElementSibling;
+              btn.setAttribute('aria-expanded','false');
+              if(submenu){ submenu.hidden = true; }
+              var caret = btn.querySelector('.caret');
+              if(caret){ caret.style.transform = 'rotate(0deg)'; }
+            } else {
+              // exclusive expand
+              collapseSubmenus();
+              expandGroup(btn);
+            }
           }
         });
+
+        // Auto-open the group that matches current path
+        try {
+          var path = location.pathname || '';
+          var links = sidebar.querySelectorAll('a[href]');
+          var groupToOpen = null;
+          links.forEach(function(a){
+            var href = a.getAttribute('href');
+            if(!href) return;
+            // prefer exact match; else startsWith match
+            if(href === path || (path.startsWith(href) && href !== '#')){
+              var group = a.closest('.menu-group');
+              if(group){ groupToOpen = group; }
+            }
+          });
+          if(groupToOpen){
+            var btn = groupToOpen.querySelector('.menu-group-toggle');
+            collapseSubmenus();
+            expandGroup(btn);
+          }
+        } catch(e) { /* noop */ }
       }
     })();
   </script>

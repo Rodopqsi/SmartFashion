@@ -16,12 +16,13 @@ export default function Cart(){
   const [checking, setChecking] = React.useState(false)
   const [addressId, setAddressId] = React.useState(null)
   const [addressWarning, setAddressWarning] = React.useState(false)
+  const [promoCode, setPromoCode] = React.useState('')
 
   const preview = async () => {
     if (!items?.length) return
     setChecking(true)
     try{
-      const payload = { items: items.map(i => ({ product_id: i.productId, size_id: i.sizeId, color_id: i.colorId, qty: i.qty })) }
+      const payload = { items: items.map(i => ({ product_id: i.productId, size_id: i.sizeId, color_id: i.colorId, qty: i.qty })), ...(promoCode ? { promo_code: promoCode.trim() } : {}) }
   const headers = { 'Content-Type':'application/json' }
   const res = await fetchWithAuth(`${API_BASE}/api/checkout/preview/`, { method:'POST', headers, body: JSON.stringify(payload) })
       const j = await res.json().catch(()=>null)
@@ -38,7 +39,8 @@ export default function Cart(){
       const payload = {
         userEmail,
         address_id: addressId || undefined,
-        items: items.map(i => ({ product_id: i.productId, size_id: i.sizeId, color_id: i.colorId, qty: i.qty }))
+        items: items.map(i => ({ product_id: i.productId, size_id: i.sizeId, color_id: i.colorId, qty: i.qty })),
+        ...(promoCode ? { promo_code: promoCode.trim() } : {}),
       }
       const headers = { 'Content-Type':'application/json' }
       // First, create the order locally so we have an order_number (reserve stock)
@@ -47,7 +49,7 @@ export default function Cart(){
       const orderNum = confirmJson?.order_number || `LOCAL-${Date.now()}`
 
       // Then create Stripe session passing the pre_order so Stripe metadata contains the order number
-      const stripePayload = { ...payload, pre_order: orderNum }
+      const stripePayload = { ...payload, pre_order: orderNum, ...(promoCode ? { promo_code: promoCode.trim() } : {}) }
       const res = await fetchWithAuth(`${API_BASE}/api/payments/create_session/`, { method:'POST', headers, body: JSON.stringify(stripePayload) })
       const j = await res.json().catch(()=>null)
       if (res.ok && j?.url){
@@ -112,6 +114,20 @@ export default function Cart(){
             <div style={row}><span>IGV ({Math.round(IGV_RATE*100)}%)</span><span>S/ {(serverTotals?.igv ?? igv).toFixed(2)}</span></div>
             <hr style={{margin:'10px 0', border:'none', borderTop:'1px solid var(--color-border)'}}/>
             <div style={{...row, fontWeight:800}}><span>Total</span><span>S/ {(serverTotals?.total ?? total).toFixed(2)}</span></div>
+              <div style={{ marginTop:10 }}>
+                <label htmlFor="promo" style={{ display:'block', fontSize:12, color:'var(--color-text-soft)', marginBottom:4 }}>Código de promoción (opcional)</label>
+                <div style={{ display:'flex', gap:8 }}>
+                  <input
+                    id="promo"
+                    value={promoCode}
+                    onChange={e=>setPromoCode(e.target.value)}
+                    placeholder="PROMO10, DESCUENTO..."
+                    style={{ flex:1, border:'1px solid var(--color-border)', height:36, borderRadius:8, background:'var(--color-bg)', color:'var(--color-text)', padding:'0 10px' }}
+                  />
+                  <button type="button" onClick={()=>{ setPromoCode(p=>p.trim()); preview(); }} style={{...btnSecondary, height:36}}>Aplicar</button>
+                </div>
+                <div style={{ fontSize:11, color:'var(--color-text-soft)', marginTop:4 }}>También podrás ingresarlo en la pantalla de pago.</div>
+              </div>
             {addressWarning && (
               <div style={{color:'#b91c1c', background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:8, padding:'8px 10px', marginBottom:8, fontSize:13, textAlign:'center'}}>
                 Debes seleccionar una dirección de envío antes de finalizar la compra.

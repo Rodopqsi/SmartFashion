@@ -21,8 +21,8 @@ public class UserController {
     @GetMapping
     public String list(@RequestParam(value = "q", required = false) String q, Model model) {
         List<AppUser> users = (q == null || q.isBlank())
-                ? appUserRepository.findAll()
-                : appUserRepository.findByEmailContainingIgnoreCaseOrNombreContainingIgnoreCaseOrApellidoContainingIgnoreCase(q, q, q);
+            ? appUserRepository.findAllByOrderByFechaRegistroDesc()
+            : appUserRepository.findByEmailContainingIgnoreCaseOrNombreContainingIgnoreCaseOrApellidoContainingIgnoreCaseOrderByFechaRegistroDesc(q, q, q);
         model.addAttribute("users", users);
         model.addAttribute("q", q == null ? "" : q);
         return "users/list";

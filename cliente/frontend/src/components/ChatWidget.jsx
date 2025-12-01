@@ -165,6 +165,97 @@ function useCatalog(open) {
           </div>
         ) }]);
       }
+      // 1) Consultar datos en tiempo real al backend (Django)
+      setMessages(m => [...m, { role: 'bot', type: 'text', content: 'Consultando datos…' }]);
+      try {
+        const rdb = await fetch(`${API_BASE}/api/chatbot/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: text })
+        });
+        let jdb = null;
+        try { jdb = await rdb.json(); } catch {}
+        if (rdb.ok && jdb && jdb.ok) {
+          // Reemplaza el mensaje de "Consultando datos…" con el resultado
+          setMessages(m => {
+            const base = m.slice(0, -1);
+            const parts = [];
+            if (jdb.type === 'kpi' && jdb.data) {
+              const total = Number(jdb.data.total || 0).toFixed(2);
+              const pedidos = Number(jdb.data.pedidos || 0);
+              parts.push({ role: 'bot', type: 'jsx', content: (
+                <div>
+                  <div style={{fontWeight:700, marginBottom:4}}>Indicadores de hoy (en vivo):</div>
+                  <div style={{display:'flex', gap:12}}>
+                    <div style={{padding:'8px 10px', border:'1px solid var(--color-border)', borderRadius:8}}>Ventas: S/ {total}</div>
+                    <div style={{padding:'8px 10px', border:'1px solid var(--color-border)', borderRadius:8}}>Pedidos: {pedidos}</div>
+                  </div>
+                </div>
+              )});
+            } else if (jdb.type === 'table' && Array.isArray(jdb.data)) {
+              parts.push({ role: 'bot', type: 'jsx', content: (
+                <div>
+                  <div style={{fontWeight:700, marginBottom:4}}>Top productos (últimos 30 días):</div>
+                  <div style={{display:'grid', gridTemplateColumns:'1fr auto auto', gap:8}}>
+                    <div style={{fontWeight:700}}>Producto</div>
+                    <div style={{fontWeight:700, textAlign:'right'}}>Cantidad</div>
+                    <div style={{fontWeight:700, textAlign:'right'}}>Ingresos</div>
+                    {jdb.data.map((r, idx) => (
+                      <>
+                        <div key={`n-${idx}`}>{r.name}</div>
+                        <div key={`q-${idx}`} style={{textAlign:'right'}}>{Number(r.qty||0)}</div>
+                        <div key={`rev-${idx}`} style={{textAlign:'right'}}>S/ {Number(r.revenue||0).toFixed(2)}</div>
+                      </>
+                    ))}
+                  </div>
+                </div>
+              )});
+            } else if (jdb.type === 'list' && Array.isArray(jdb.data)) {
+              parts.push({ role: 'bot', type: 'jsx', content: (
+                <div>
+                  <div style={{fontWeight:700, marginBottom:4}}>Pedidos de hoy:</div>
+                  <ul style={{margin:0, paddingLeft:16}}>
+                    {jdb.data.map((o, idx) => (
+                      <li key={idx}>
+                        #{o.order_number || o.id} — S/ {Number(o.total||0).toFixed(2)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )});
+            } else if (jdb.type === 'products' && Array.isArray(jdb.data)) {
+              parts.push({ role: 'bot', type: 'jsx', content: (
+                <div>
+                  <div style={{fontWeight:700, marginBottom:4}}>Productos encontrados:</div>
+                  <div className="sf-product-list">
+                    {jdb.data.slice(0,8).map(p => (
+                      <a key={p.id} className="sf-prod" href={`/producto/${p.id}`}>
+                        <img src={p.image_preview || '/img/placeholder.png'} alt={p.nombre} />
+                        <div className="meta">
+                          <span style={{fontWeight:700}}>{p.nombre}</span>
+                          <span style={{opacity:.7, fontSize:'.9rem'}}>S/ {Number(p.precio).toFixed(2)}</span>
+                          {p.categoria && <span style={{fontSize:'.7rem', opacity:.6}}>{p.categoria}</span>}
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )});
+            } else if (jdb.message) {
+              // Mensaje explícito solo si backend lo provee (ej. pregunta vacía)
+              parts.push({ role: 'bot', type: 'text', content: String(jdb.message) });
+            }
+            // Si no hay partes reconocidas, no añadimos ruido: quitamos loader y seguimos con IA
+            return parts.length ? base.concat(parts) : base;
+          });
+        } else {
+          setMessages(m => m.slice(0, -1).concat([{ role: 'bot', type: 'text', content: 'No se pudo consultar datos.' }]));
+        }
+      } catch {
+        setMessages(m => m.slice(0, -1).concat([{ role: 'bot', type: 'text', content: 'Error de red al consultar datos.' }]));
+      }
+
+      // 2) Llama a la IA (Gemini) ya existente en el backend
       setMessages(m => [...m, { role: 'bot', type: 'text', content: 'Consultando IA…' }]);
       try {
         const r = await fetch(`${API_BASE}/api/chat/ai/`, {

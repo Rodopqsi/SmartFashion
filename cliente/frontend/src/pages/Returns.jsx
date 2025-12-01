@@ -53,7 +53,7 @@ export default function Returns(){
   if(!user) return <div style={{padding:'2rem'}}>Debes iniciar sesión.</div>
 
   return (
-    <div style={{padding:'2rem', maxWidth:900, margin:'0 auto'}}>
+    <div style={{padding:'2rem', maxWidth:900, margin:'0 auto', marginTop:'4rem'}}>
       <h2>Mis Devoluciones</h2>
       <form onSubmit={onSubmit} style={{margin:'1rem 0', padding:'1rem', border:'1px solid #eee', borderRadius:8}}>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>

@@ -28,7 +28,7 @@ public class DashboardController {
 
     @GetMapping("/admin/login")
     public String adminLogin() {
-        // Render the same login template at /admin/login so Spring Security's loginPage("/admin/login") works
-        return "login";
+        // Canonicalizar: redirigir a /login para evitar confusiones de método (POST vs GET)
+        return "redirect:/login";
     }
 }

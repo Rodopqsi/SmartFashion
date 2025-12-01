@@ -20,6 +20,7 @@ import Addresses from './pages/Addresses.jsx'
 import Claims from './pages/Claims.jsx'
 import Returns from './pages/Returns.jsx'
 import Collection from './pages/Collection.jsx'
+import Shipments from './pages/Shipments.jsx'
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -40,6 +41,7 @@ createRoot(document.getElementById('root')).render(
               <Route path="/direcciones" element={<Addresses />} />
               <Route path="/reclamos" element={<Claims />} />
               <Route path="/devoluciones" element={<Returns />} />
+              <Route path="/envios" element={<Shipments />} />
               <Route path="/favoritos" element={<Favorites />} />
               <Route path="/recuperar" element={<ForgotPassword />} />
               <Route path="/carrito" element={<Cart />} />

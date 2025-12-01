@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout (title=${title}, content=~{::section})}">
+<section>
+    <style>
+        .chat{display:grid;grid-template-columns:2fr 3fr;gap:12px}
+        @media(max-width:900px){.chat{grid-template-columns:1fr}}
+        .card{padding:12px;border:1px solid var(--admin-border);border-radius:10px;background:var(--admin-bg-soft)}
+        .msg{margin:6px 0;padding:8px;border-radius:8px}
+        .msg.user{background:rgba(99,102,241,.2)}
+        .msg.bot{background:rgba(16,185,129,.2)}
+        .table{width:100%;border-collapse:collapse}
+        .table th,.table td{border-bottom:1px solid var(--admin-border);padding:6px;text-align:left}
+    </style>
+    <h1 th:text="${title}">Chatbot</h1>
+    <div class="chat">
+        <div class="card">
+            <div id="history"></div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+                <input id="q" type="text" placeholder="Pregunta (ej: ventas hoy, top productos, pedidos hoy)" style="flex:1" />
+                <button id="send" class="btn">Enviar</button>
+            </div>
+        </div>
+        <div class="card">
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const history = document.getElementById('history');
+        const result = document.getElementById('result');
+        document.getElementById('send').addEventListener('click', async () => {
+            const q = document.getElementById('q').value.trim();
+            if(!q) return;
+            const h = document.createElement('div'); h.className='msg user'; h.textContent=q; history.appendChild(h);
+            try{
+                const resp = await fetch('/admin/chatbot/api/query', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ q }) });
+                const data = await resp.json();
+                if (data.message) { const b = document.createElement('div'); b.className='msg bot'; b.textContent = data.message; history.appendChild(b); }
+                renderResult(data);
+            }catch(e){ console.error(e); }
+        });
+
+        function renderResult(data){
+            result.innerHTML = '';
+            if(!data || data.ok===false){
+                result.textContent = 'Error: '+(data && data.error ? data.error : 'desconocido');
+                return;
+            }
+            if(data.type==='kpi'){
+                const d = data.data || {}; result.innerHTML = `<div class='card'><strong>Ventas Hoy</strong><div>Total: ${d.total}</div><div>Pedidos: ${d.pedidos}</div></div>`;
+            }else if(data.type==='table'){
+                const rows = data.data || []; const table = document.createElement('table'); table.className='table';
+                table.innerHTML = `<thead><tr><th>Producto</th><th>Cantidad</th><th>Ingresos</th></tr></thead>`;
+                const tb = document.createElement('tbody');
+                rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML = `<td>${r.name||('ID '+r.product_id)}</td><td>${r.qty}</td><td>${r.revenue}</td>`; tb.appendChild(tr); });
+                table.appendChild(tb); result.appendChild(table);
+            }else if(data.type==='list'){
+                const rows = data.data || []; const ul=document.createElement('ul'); rows.forEach(r=>{ const li=document.createElement('li'); li.textContent = `#${r.order_number} - ${r.total}`; ul.appendChild(li); }); result.appendChild(ul);
+            }else if(data.type==='products'){
+                const rows = data.data || [];
+                if(!rows.length){ result.textContent = 'Sin resultados'; return; }
+                const wrap = document.createElement('div');
+                wrap.style.display = 'grid';
+                wrap.style.gridTemplateColumns = 'repeat(auto-fill, minmax(180px, 1fr))';
+                wrap.style.gap = '10px';
+                rows.slice(0,12).forEach(p => {
+                    const card = document.createElement('div'); card.className='card'; card.style.padding='10px';
+                    const img = document.createElement('img'); img.src = p.image_preview || '/images/placeholder.png'; img.alt = p.nombre || 'Producto'; img.style.width='100%'; img.style.borderRadius='8px'; img.style.aspectRatio='1/1'; img.style.objectFit='cover';
+                    const name = document.createElement('div'); name.style.fontWeight='700'; name.style.margin='6px 0 2px'; name.textContent = p.nombre || `ID ${p.id}`;
+                    const price = document.createElement('div'); price.style.opacity='.8'; price.textContent = `S/ ${Number(p.precio||0).toFixed(2)}`;
+                    const cat = document.createElement('div'); cat.style.opacity='.6'; cat.style.fontSize='.85rem'; cat.textContent = p.categoria || '';
+                    card.appendChild(img); card.appendChild(name); card.appendChild(price); if(p.categoria) card.appendChild(cat);
+                    wrap.appendChild(card);
+                });
+                result.appendChild(wrap);
+            }
+        }
+    </script>
+</section>
+</html>
