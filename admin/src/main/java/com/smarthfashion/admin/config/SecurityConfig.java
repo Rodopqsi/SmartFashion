@@ -46,7 +46,6 @@ public class SecurityConfig {
                 auth.requestMatchers("/css/**", "/admin/login", "/error", "/sso/login", "/ping", "/tracking/**").permitAll();
                 auth.requestMatchers("/api/internal/**").permitAll();
                 if (allowPublicAdmin) {
-                    // Temporary debug mode: allow public access to admin UI
                     auth.requestMatchers("/admin/**").permitAll();
                 } else {
                     auth.requestMatchers("/admin/**").hasRole("ADMIN");
