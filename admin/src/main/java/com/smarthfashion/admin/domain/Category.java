@@ -3,7 +3,7 @@ package com.smarthfashion.admin.domain;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "Categorias")
+@Table(name = "categorias")
 public class Category {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

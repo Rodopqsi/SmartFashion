@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${title}">Reporte de Ventas</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        .cards { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .card { padding: .8rem 1rem; background:#f8f9fa; border:1px solid #ddd; border-radius:6px; flex:1 1 180px; }
+        h2 { margin-top:1.5rem; }
+        canvas { max-width: 100%; }
+        table { width:100%; border-collapse: collapse; }
+        th, td { padding: .4rem .6rem; border-bottom:1px solid #eee; text-align:left; }
+    </style>
+</head>
+<body>
+<div th:replace="layout :: navbar"></div>
+<main class="container" style="padding:1rem 1.5rem;">
+    <h1 th:text="${title}">Reporte de Ventas</h1>
+    <div class="cards">
+        <div class="card" id="card-today">
+            <strong>Hoy</strong>
+            <div>Total: <span th:text="${summaryToday.totalSales}"></span></div>
+            <div>Pedidos: <span th:text="${summaryToday.ordersCount}"></span></div>
+        </div>
+        <div class="card" id="card-month">
+            <strong>Mes</strong>
+            <div>Total: <span th:text="${summaryMonth.totalSales}"></span></div>
+            <div>Pedidos: <span th:text="${summaryMonth.ordersCount}"></span></div>
+        </div>
+        <div class="card" id="card-year">
+            <strong>Año</strong>
+            <div>Total: <span th:text="${summaryYear.totalSales}"></span></div>
+            <div>Pedidos: <span th:text="${summaryYear.ordersCount}"></span></div>
+        </div>
+    </div>
+
+    <h2>Últimos 30 días</h2>
+    <canvas id="chartDaily" height="120"></canvas>
+    <h2>Últimos 12 meses</h2>
+    <canvas id="chartMonthly" height="120"></canvas>
+    <h2>Top Productos (30 días)</h2>
+    <table id="topProducts">
+        <thead>
+        <tr><th>Producto</th><th>Cantidad</th><th>Ingresos</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</main>
+<script src="/js/sales-dashboard.js"></script>
+</body>
+</html>

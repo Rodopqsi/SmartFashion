@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "Coleccion")
+@Table(name = "coleccion")
 public class Collection {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,8 +30,8 @@ public class Collection {
     private int orden = 0;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "ColeccionProducto",
+        @JoinTable(
+            name = "coleccionproducto",
             joinColumns = @JoinColumn(name = "id_coleccion"),
             inverseJoinColumns = @JoinColumn(name = "id_producto")
     )
