@@ -28,9 +28,9 @@ public class SecurityConfig {
                 .withUsername("admin")
                 .password(passwordEncoder.encode("admin123"))
                 .roles("ADMIN")
-                .build();
+                http
         return new InMemoryUserDetailsManager(admin);
-    }
+                        auth.requestMatchers("/css/**", "/login", "/admin/login", "/error", "/sso/login", "/ping", "/tracking/**").permitAll();
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -41,14 +41,15 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         boolean allowPublicAdmin = Boolean.parseBoolean(env.getProperty("ADMIN_ALLOW_PUBLIC", "false"));
 
-        http
-            .authorizeHttpRequests(auth -> {
+                    .formLogin(login -> login
+                        .loginPage("/login")
+                        .loginProcessingUrl("/login")
                 auth.requestMatchers("/css/**", "/admin/login", "/error", "/sso/login", "/ping", "/tracking/**").permitAll();
                 auth.requestMatchers("/api/internal/**").permitAll();
                 if (allowPublicAdmin) {
                     auth.requestMatchers("/admin/**").permitAll();
                 } else {
-                    auth.requestMatchers("/admin/**").hasRole("ADMIN");
+                        .logoutSuccessUrl("/login?logout")
                 }
                 auth.anyRequest().authenticated();
             })
