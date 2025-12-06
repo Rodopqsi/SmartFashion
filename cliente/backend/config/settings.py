@@ -7,14 +7,14 @@ load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-me')
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('1','true','yes')
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # If running behind a reverse proxy that terminates TLS, instruct Django
 # to trust the X-Forwarded-Proto header so request.is_secure() is correct.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Trusted origins for CSRF checks (include public URL)
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://smarthfashion.shop').split(',')
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://smarthfashion.shop,http://localhost:5173,http://127.0.0.1:5173').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -35,6 +35,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'shop.middleware.UsuarioSyncMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -82,7 +83,15 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS: allow specific frontend origins and credentials for cookies/sessions
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+]
+CORS_ALLOW_CREDENTIALS = True
+
+# For development over HTTP, keep default cookie settings; adjust for HTTPS if needed
+# SESSION_COOKIE_SAMESITE = 'Lax'  # default is Lax; set to 'None' with SESSION_COOKIE_SECURE=True for HTTPS cross-site
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

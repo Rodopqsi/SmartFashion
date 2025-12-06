@@ -1,3 +1,46 @@
+from django.contrib.auth import get_user_model
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+import time
+
+from .models import Usuario
+
+User = get_user_model()
+
+
+@receiver(post_save, sender=User)
+def sync_auth_user_to_usuario(sender, instance, created, **kwargs):
+    """
+    Sincroniza el registro de auth_user hacia la tabla `usuario` usada por el Admin Java.
+    - Crea si no existe por email.
+    - Actualiza campos básicos si ya existe.
+    """
+    email = getattr(instance, "email", None)
+    if not email:
+        return
+
+    try:
+        usuario = Usuario.objects.filter(email=email).first()
+        if usuario is None:
+            usuario = Usuario(
+                nombre=getattr(instance, "first_name", "") or "",
+                apellido=getattr(instance, "last_name", "") or "",
+                email=email,
+                telefono="",
+                fecha_registro=int(time.time()),
+                bloqueado=False,
+            )
+        else:
+            usuario.nombre = getattr(instance, "first_name", "") or usuario.nombre or ""
+            usuario.apellido = getattr(instance, "last_name", "") or usuario.apellido or ""
+            # Mantener telefono si ya existe; aquí no lo sobreescribimos.
+            if not usuario.fecha_registro:
+                usuario.fecha_registro = int(time.time())
+        # Guardar
+        usuario.save(using=Usuario._state.db or None)
+    except Exception:
+        # Evitar romper el flujo de registro por errores de sync.
+        pass
 import os
 import threading
 from django.db.models.signals import post_save, post_delete

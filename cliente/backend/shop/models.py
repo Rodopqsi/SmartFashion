@@ -137,3 +137,19 @@ class ColeccionProducto(models.Model):
         managed = False
         db_table = 'coleccionproducto'
 
+
+# --- Usuario (tabla externa usada por el Admin Java) ---
+class Usuario(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    nombre = models.CharField(max_length=255)
+    apellido = models.CharField(max_length=255)
+    email = models.CharField(max_length=255)
+    telefono = models.CharField(max_length=255)
+    # La tabla almacena fecha_registro como bigint (epoch seconds)
+    fecha_registro = models.BigIntegerField()
+    bloqueado = models.BooleanField(default=False)
+
+    class Meta:
+        managed = False
+        db_table = 'usuario'
+
