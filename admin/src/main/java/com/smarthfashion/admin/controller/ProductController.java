@@ -11,6 +11,10 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.ArrayList;
+
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 @Controller
 @RequestMapping("/admin/products")
@@ -67,6 +71,79 @@ public class ProductController {
         model.addAttribute("precioMin", precioMinStr);
         model.addAttribute("precioMax", precioMaxStr);
         return "products/list";
+    }
+
+    @PostMapping(path = "/import", consumes = {"multipart/form-data"})
+    public String importExcel(@RequestParam("file") MultipartFile file, Model model){
+        if (file == null || file.isEmpty()) {
+            return "redirect:/admin/products?err=Seleccione%20un%20archivo%20Excel";
+        }
+        int created = 0;
+        int skipped = 0;
+        List<String> errors = new ArrayList<>();
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            boolean headerSkipped = false;
+            for (Row row : sheet) {
+                // Skip header
+                if (!headerSkipped) { headerSkipped = true; continue; }
+                try {
+                    Cell cNombre = row.getCell(0);
+                    Cell cDescripcion = row.getCell(1);
+                    Cell cPrecio = row.getCell(2);
+                    Cell cCategoria = row.getCell(3);
+                    Cell cImagen = row.getCell(4);
+
+                    String nombre = cNombre != null ? cNombre.getStringCellValue().trim() : null;
+                    String descripcion = cDescripcion != null ? cDescripcion.getStringCellValue().trim() : null;
+                    BigDecimal precio = null;
+                    if (cPrecio != null) {
+                        if (cPrecio.getCellType() == CellType.NUMERIC) {
+                            precio = BigDecimal.valueOf(cPrecio.getNumericCellValue());
+                        } else {
+                            String s = cPrecio.getStringCellValue();
+                            if (s != null && !s.isBlank()) precio = new BigDecimal(s.trim());
+                        }
+                    }
+                    Long categoriaId = null;
+                    if (cCategoria != null) {
+                        if (cCategoria.getCellType() == CellType.NUMERIC) {
+                            categoriaId = (long) cCategoria.getNumericCellValue();
+                        } else {
+                            String s = cCategoria.getStringCellValue();
+                            if (s != null && !s.isBlank()) categoriaId = Long.parseLong(s.trim());
+                        }
+                    }
+                    String imagen = cImagen != null ? cImagen.getStringCellValue().trim() : null;
+
+                    if (nombre == null || nombre.isBlank() || descripcion == null || descripcion.isBlank() || precio == null || categoriaId == null) {
+                        skipped++;
+                        errors.add("Fila " + (row.getRowNum()+1) + ": datos incompletos");
+                        continue;
+                    }
+
+                    Product p = new Product();
+                    p.setNombre(nombre);
+                    p.setDescripcion(descripcion);
+                    p.setPrecio(precio);
+                    p.setCategoria(categoryRepository.findById(categoriaId).orElse(null));
+                    if (imagen != null && !imagen.isBlank()) p.setImagePreview(imagen);
+                    Product saved = productRepository.save(p);
+                    created++;
+                } catch (Exception ex) {
+                    skipped++;
+                    errors.add("Fila " + (row.getRowNum()+1) + ": " + ex.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            return "redirect:/admin/products?err=No%20se%20pudo%20procesar%20el%20Excel";
+        }
+        String okMsg = String.format("Importaci%C3%B3n%20completada:%20creados%20%d,%20omitidos%20%d", created, skipped);
+        if (!errors.isEmpty()) {
+            // keep message concise; detailed errors can be logged later
+            okMsg += "%20(con%20algunos%20errores)";
+        }
+        return "redirect:/admin/products?ok=" + okMsg;
     }
 
     @GetMapping("/new")
@@ -178,7 +255,7 @@ public class ProductController {
                             @RequestParam(name = "files", required = false) MultipartFile[] files){
         Product p = productRepository.findById(id).orElseThrow();
         Size s = (sizeId != null ? sizeRepository.findById(sizeId).orElse(null) : null);
-        Color c = (colorId != null ? colorRepository.findById(colorId).orElse(null) : null);
+        com.smarthfashion.admin.domain.Color c = (colorId != null ? colorRepository.findById(colorId).orElse(null) : null);
         boolean added = false;
 
         
